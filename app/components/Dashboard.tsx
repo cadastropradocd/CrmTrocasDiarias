@@ -44,9 +44,8 @@ function parseNumBR(texto: string): number | null {
 
 function formatDiferenca(valor: number): string {
   const f = formatBRL(Math.abs(valor))
-  if (valor > 0) return `${f} <span class="diferenca-seta">↑</span>`
-  if (valor < 0) return `${f} <span class="diferenca-seta">↓</span>`
-  return `${f} <span class="diferenca-seta">→</span>`
+  const seta = valor > 0 ? '↑' : valor < 0 ? '↓' : '→'
+  return `${f} <span class="diferenca-seta">${seta}</span>`
 }
 
 function formatStatusPct(realizado: number, meta: number): string {
@@ -84,13 +83,19 @@ function obterDestaques(registros: Registro[]) {
 }
 
 function formatDateDisplay(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00Z')
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
+  const d = new Date(dateStr)
+  const dia = String(d.getDate()).padStart(2, '0')
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const ano = d.getFullYear()
+  return `${dia}/${mes}/${ano}`
 }
 
 function todayISO(): string {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 interface DashboardProps {
@@ -107,28 +112,14 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
   const [saving, setSaving] = useState(false)
   const [sortCol, setSortCol] = useState<SortCol | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
-  const [editFeedback, setEditFeedback] = useState<Record<string, 'ok' | 'erro'>>({})
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstance = useRef<Chart | null>(null)
   const headerRef = useRef<HTMLElement>(null)
 
-  const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null
-
   const fetchData = useCallback(async (date: string) => {
-    const currentToken = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
-    }
     try {
-      const res = await fetch(`/api/dados?date=${date}`, { headers })
+      const res = await fetch(`/api/dados?date=${date}`)
       if (!res.ok) {
-        if (res.status === 401) {
-          sessionStorage.clear()
-          showToast('Sessão expirada. Faça login novamente.', 'warning')
-          router.push('/login')
-          return
-        }
         showToast('Erro ao carregar dados', 'error')
         setLoading(false)
         return
@@ -141,7 +132,7 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -298,15 +289,10 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
   async function handleSave() {
     if (!editable) return
     setSaving(true)
-    const currentToken = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
-    }
     try {
       const res = await fetch('/api/dados', {
         method: 'PUT',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: selectedDate, registros }),
       })
       if (!res.ok) {
@@ -324,7 +310,10 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
     }
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await fetch('/api/logout', { method: 'POST' })
+    } catch { /* ignore */ }
     sessionStorage.clear()
     router.push('/login')
   }
@@ -344,8 +333,8 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
         <header className="header" ref={headerRef} style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="header-left">
             <h1>RELATÓRIO DE TROCAS DIÁRIO</h1>
-            <span className="date-badge">{formatDateDisplay(selectedDate + 'T00:00:00Z')}</span>
-            <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} token={token} />
+            <span className="date-badge">{formatDateDisplay(selectedDate)}</span>
+            <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
             {readonlyBanner && (
               <span style={{
                 background: 'rgba(255,255,255,0.1)',
