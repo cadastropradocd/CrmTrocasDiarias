@@ -4,8 +4,18 @@ import { comparePassword, signToken } from '@/app/lib/auth'
 
 export async function POST(req: Request) {
   try {
-    const raw = await req.text()
-    const { username, password } = JSON.parse(raw)
+    let username: string, password: string
+
+    try {
+      const body = await req.json()
+      if (typeof body.username !== 'string' || typeof body.password !== 'string') {
+        return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+      }
+      username = body.username.trim()
+      password = body.password
+    } catch {
+      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+    }
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 })
@@ -22,7 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
     }
 
-    const token = signToken({ email: user.username, name: user.name, role: user.role })
+    const token = signToken({ username: user.username, name: user.name, role: user.role })
 
     const response = NextResponse.json({ token, name: user.name, role: user.role })
     response.cookies.set('session', token, {

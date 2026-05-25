@@ -1,12 +1,29 @@
 import { PrismaClient, Role } from '@prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 import bcrypt from 'bcryptjs'
-import path from 'path'
 
-const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
-const absolutePath = path.resolve(process.cwd(), dbUrl.replace('file:', ''))
-const adapter = new PrismaBetterSqlite3({ url: `file:${absolutePath}` })
-const prisma = new PrismaClient({ adapter })
+function createPrismaClient() {
+  const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
+
+  // PostgreSQL (Supabase)
+  if (dbUrl.startsWith('postgresql')) {
+    console.log('[seed] Connecting to PostgreSQL (Supabase)')
+    const pool = new pg.Pool({ connectionString: dbUrl })
+    const adapter = new PrismaPg(pool)
+    return new PrismaClient({ adapter })
+  }
+
+  // SQLite (local dev)
+  console.log('[seed] Connecting to SQLite (local dev)')
+  const path = dbUrl.replace('file:', '')
+  const absolutePath = path.resolve(process.cwd(), path)
+  const adapter = new PrismaBetterSqlite3({ url: `file:${absolutePath}` })
+  return new PrismaClient({ adapter })
+}
+
+const prisma = createPrismaClient()
 
 function toDateOnly(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0))
@@ -21,18 +38,6 @@ function subDays(d: Date, n: number): Date {
 const USUARIOS = [
   { username: 'cadastro', password: '160922', name: 'Cadastro', role: 'ADMIN' as Role },
   { username: 'comercial', password: '123456', name: 'Comercial', role: 'USER' as Role },
-]
-
-const CATEGORIAS = [
-  'AÇOUGUE',
-  'BAZAR/ELETRO/FLORES',
-  'PETSHOP',
-  'BEBIDAS',
-  'FLC',
-  'HIGIENE',
-  'PADARIA',
-  'LIMPEZA',
-  'MERCEARIA',
 ]
 
 const HISTORICO_DATA: Array<{ data: Date; valores: Array<{ categoria: string; realizado: number; meta: number }> }> = [

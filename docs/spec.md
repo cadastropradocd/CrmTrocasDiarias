@@ -41,17 +41,26 @@ model User {
   username String   @unique
   password String
   name     String
-  role     Role     @default(USER) // ENUM: ADMIN | USER
+  role     Role     @default(USER)
   createdAt DateTime @default(now())
 }
 
+model TrocaDia {
+  id        Int       @id @default(autoincrement())
+  data      DateTime  @unique  // Apenas a data importa (sem horário)
+  createdAt DateTime  @default(now())
+  registros Registro[]
+}
+
 model Registro {
-  id        Int      @id @default(autoincrement())
-  categoria String
-  realizado Float
-  meta      Float
-  data      DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  categoria   String
+  realizado   Float
+  meta        Float
+  trocaDiaId  Int
+  trocaDia    TrocaDia @relation(fields: [trocaDiaId], references: [id], onDelete: Cascade)
+
+  @@unique([trocaDiaId, categoria])
 }
 
 enum Role {
@@ -59,8 +68,9 @@ enum Role {
   USER
 }
 5. Regras de Negócio e Fluxos
-5.1. Autenticação e Sessão (CRÍTICO - Corrigir Loop Infinito)
-Fluxo Atual (Bug): O cliente usa sessionStorage para o token, mas o servidor valida via cookie. A dessincronização causa 401 e redirecionamento infinito. Requisito de Correção:
+5.1. Autenticação e Sessão
+Cookie HttpOnly é a fonte da verdade para sessão server-side.
+O cliente mantém token no sessionStorage apenas para APIs que requerem Bearer header.
 
 Login (POST /api/login):
 

@@ -69,15 +69,55 @@ export async function PUT(req: Request) {
   }
 
   try {
-    const body = await req.json()
-    const { date, registros } = body as { date: string; registros: Array<{ categoria: string; realizado: number; meta: number }> }
-
-    if (!date || !registros || !Array.isArray(registros)) {
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
       return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
     }
 
-    const dateObj = new Date(date + 'T00:00:00Z')
-    const utcDate = new Date(Date.UTC(dateObj.getUTCFullYear(), dateObj.getUTCMonth(), dateObj.getUTCDate(), 0, 0, 0, 0))
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+    }
+
+    const payload = body as Record<string, unknown>
+
+    // Validação de date
+    if (typeof payload.date !== 'string' || !payload.date) {
+      return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
+    }
+    const dateObj = new Date(payload.date + 'T00:00:00Z')
+    if (isNaN(dateObj.getTime())) {
+      return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
+    }
+
+    // Validação de registros
+    if (!Array.isArray(payload.registros)) {
+      return NextResponse.json({ error: 'Registros inválidos' }, { status: 400 })
+    }
+
+    const registros = payload.registros.map((r: unknown) => {
+      if (typeof r !== 'object' || r === null) {
+        throw new Error('Registro inválido')
+      }
+      const reg = r as Record<string, unknown>
+      if (typeof reg.categoria !== 'string' || !reg.categoria) {
+        throw new Error('Categoria inválida')
+      }
+      if (typeof reg.realizado !== 'number' || !Number.isFinite(reg.realizado)) {
+        throw new Error('Realizado inválido')
+      }
+      if (typeof reg.meta !== 'number' || !Number.isFinite(reg.meta)) {
+        throw new Error('Meta inválida')
+      }
+      return {
+        categoria: String(reg.categoria),
+        realizado: Number(reg.realizado),
+        meta: Number(reg.meta),
+      }
+    })
+
+    const utcDate = toDateOnly(dateObj)
 
     let trocaDia = await prisma.trocaDia.findUnique({ where: { data: utcDate } })
     if (!trocaDia) {

@@ -2,7 +2,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { Role } from '@prisma/client'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production')
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
@@ -13,11 +17,14 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
- * Gera JWT com payload contendo email, name e role.
+ * Gera JWT com payload contendo username, name e role.
  * Cookie HttpOnly é a fonte da verdade para sessão server-side.
  * O cliente mantém uma cópia no sessionStorage apenas para uso no Authorization header.
  */
-export function signToken(payload: { email: string; name: string; role: Role }): string {
+export function signToken(payload: { username: string; name: string; role: Role }): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured')
+  }
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
 }
 
@@ -25,9 +32,12 @@ export function signToken(payload: { email: string; name: string; role: Role }):
  * Verifica token JWT.
  * Retorna null se token inválido ou expirado.
  */
-export function verifyToken(token: string): { email: string; name: string; role: Role } | null {
+export function verifyToken(token: string): { username: string; name: string; role: Role } | null {
+  if (!JWT_SECRET) {
+    return null
+  }
   try {
-    return jwt.verify(token, JWT_SECRET) as { email: string; name: string; role: Role }
+    return jwt.verify(token, JWT_SECRET) as { username: string; name: string; role: Role }
   } catch {
     return null
   }

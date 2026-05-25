@@ -33,33 +33,26 @@ function isToday(dateStr: string): boolean {
 interface DateSelectorProps {
   selectedDate: string
   onDateChange: (date: string) => void
-  token: string | null
 }
 
-export default function DateSelector({ selectedDate, onDateChange, token }: DateSelectorProps) {
+export default function DateSelector({ selectedDate, onDateChange }: DateSelectorProps) {
   const [dates, setDates] = useState<DateOption[]>([])
-  const [loading, setLoading] = useState(true)
   const [customDate, setCustomDate] = useState('')
 
   useEffect(() => {
     async function fetchDates() {
       try {
-        const res = await fetch('/api/historico', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        // Usa cookie automaticamente via getSession() no server
+        const res = await fetch('/api/historico')
         if (!res.ok) return
-        const data: DateOption[] = await res.json()
+        const data = await res.json()
         setDates(data)
       } catch {
         // ignore
-      } finally {
-        setLoading(false)
       }
     }
-    if (token) {
-      fetchDates()
-    }
-  }, [token])
+    fetchDates()
+  }, [])
 
   function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value
