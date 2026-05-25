@@ -1,8 +1,10 @@
-import { PrismaClient, Role } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+import { Role } from '../app/lib/types'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import bcrypt from 'bcryptjs'
+import path from 'path'
 
 function createPrismaClient() {
   const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
@@ -17,8 +19,8 @@ function createPrismaClient() {
 
   // SQLite (local dev)
   console.log('[seed] Connecting to SQLite (local dev)')
-  const path = dbUrl.replace('file:', '')
-  const absolutePath = path.resolve(process.cwd(), path)
+  const dbPath = dbUrl.replace('file:', '')
+  const absolutePath = path.resolve(process.cwd(), dbPath)
   const adapter = new PrismaBetterSqlite3({ url: `file:${absolutePath}` })
   return new PrismaClient({ adapter })
 }

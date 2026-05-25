@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/app/lib/prisma'
 import { getSession } from '@/app/lib/session'
 import { verifyToken } from '@/app/lib/auth'
-import { Role } from '@prisma/client'
+import { Role } from '@/app/lib/types'
 
 function toDateOnly(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0))

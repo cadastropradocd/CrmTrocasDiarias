@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { verifyToken } from './auth'
-import { Role } from '@prisma/client'
+import { Role } from './types'
 
 const SESSION_COOKIE = 'session'
 
