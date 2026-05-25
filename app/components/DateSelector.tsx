@@ -8,26 +8,35 @@ interface DateOption {
   createdAt: string
 }
 
+// Converte string ISO "2026-05-25T00:00:00.000Z" para "2026-05-25"
+function isoToDateOnly(isoStr: string): string {
+  if (!isoStr) return ''
+  // Se já está no formato YYYY-MM-DD, retorna direto
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) return isoStr
+  // Caso contrário, extrai a data do ISO
+  const parts = isoStr.split('T')
+  return parts[0] || ''
+}
+
 function formatDateDisplay(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00Z')
-  const dia = String(d.getUTCDate()).padStart(2, '0')
-  const mes = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const ano = d.getUTCFullYear()
+  // Aceita tanto "2026-05-25" quanto "2026-05-25T00:00:00.000Z"
+  const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00')
+  const dia = String(d.getDate()).padStart(2, '0')
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const ano = d.getFullYear()
   return `${dia}/${mes}/${ano}`
 }
 
 function formatDateValue(dateStr: string): string {
-  return dateStr.split('T')[0]
+  return isoToDateOnly(dateStr)
 }
 
 function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr + 'T00:00:00Z')
   const today = new Date()
-  return (
-    d.getUTCFullYear() === today.getFullYear() &&
-    d.getUTCMonth() === today.getMonth() &&
-    d.getUTCDate() === today.getUTCDate()
-  )
+  const y = today.getFullYear()
+  const m = today.getMonth() + 1
+  const day = today.getDate()
+return formatDateValue(dateStr) === `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
 interface DateSelectorProps {
