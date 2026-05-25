@@ -6,7 +6,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    // Use DIRECT_URL for migrations (session-mode pooler, no pgbouncer)
-    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
+    url: process.env["DATABASE_URL"],
   },
 });

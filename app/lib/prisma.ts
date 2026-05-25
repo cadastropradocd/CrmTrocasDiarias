@@ -1,20 +1,23 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 import path from 'path'
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
-function createSqliteClient(): PrismaClient {
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-    // Vercel sem DATABASE_URL → usa SQLite em /tmp (precisa copiar dev.db)
-    console.log('[prisma] Vercel prod mode, using SQLite')
-    const dbPath = path.join('/tmp', 'prod.db')
-    const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` })
+function createPrismaClient(): PrismaClient {
+  const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
+
+  if (dbUrl.startsWith('postgresql')) {
+    console.log('[prisma] Connecting to PostgreSQL (Supabase)')
+    const pool = new pg.Pool({ connectionString: dbUrl })
+    const adapter = new PrismaPg(pool)
     return new PrismaClient({ adapter })
   }
-  // Local dev
+
+  // SQLite (local dev)
   console.log('[prisma] Connecting to SQLite (local dev)')
-  const dbUrl = process.env.DATABASE_URL || 'file:./dev.db'
+  const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
   const dbPath = dbUrl.replace('file:', '')
   const absolutePath = path.resolve(process.cwd(), dbPath)
   console.log('[prisma] Database path:', absolutePath)
@@ -22,6 +25,6 @@ function createSqliteClient(): PrismaClient {
   return new PrismaClient({ adapter })
 }
 
-export const prisma: PrismaClient = globalForPrisma.prisma ?? createSqliteClient()
+export const prisma: PrismaClient = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

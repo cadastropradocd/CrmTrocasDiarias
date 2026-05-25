@@ -2,7 +2,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { Role } from './types'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-fallback-secret-mudar-em-producao'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production')
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10)
@@ -18,6 +22,9 @@ export async function comparePassword(password: string, hash: string): Promise<b
  * O cliente mantém uma cópia no sessionStorage apenas para uso no Authorization header.
  */
 export function signToken(payload: { username: string; name: string; role: Role }): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured')
+  }
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
 }
 
@@ -26,6 +33,9 @@ export function signToken(payload: { username: string; name: string; role: Role 
  * Retorna null se token inválido ou expirado.
  */
 export function verifyToken(token: string): { username: string; name: string; role: Role } | null {
+  if (!JWT_SECRET) {
+    return null
+  }
   try {
     return jwt.verify(token, JWT_SECRET) as { username: string; name: string; role: Role }
   } catch {
