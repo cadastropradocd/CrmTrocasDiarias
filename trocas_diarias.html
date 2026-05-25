@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Trocas Diário</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-page: #0b1525;
+  --bg-card: #151e30;
+  --bg-header: #0f172a;
+  --border: #1e3a5f;
+  --border-light: #2d4a6f;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-heading: #ffffff;
+  --brand: #3b82f6;
+  --brand-border: #1d4ed8;
+  --accent: #fbbf24;
+  --accent-dark: #d97706;
+  --ok: #10b981;
+  --ok-light: #34d399;
+  --ok-bg: rgba(16, 185, 129, 0.15);
+  --ok-bg-strong: rgba(16, 185, 129, 0.25);
+  --danger: #ef4444;
+  --danger-light: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-bg-strong: rgba(239, 68, 68, 0.25);
+  --warn-bg: rgba(251, 191, 36, 0.15);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --transition: 0.2s ease;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html { transition: background 0.4s ease; }
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg-page);
+  background-attachment: fixed;
+}
+
+body { overflow-x: hidden; }
+
+/* ── Toast ─────────────────────────────── */
+#toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid;
+  animation: toastIn 0.3s ease forwards;
+  max-width: 360px;
+  line-height: 1.3;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.toast-success {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.toast-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.toast-warning {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toast-info {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.toast-exit {
+  animation: toastOut 0.25s ease forwards;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(40px) scale(0.95); }
+}
+
+/* ── Dashboard ─────────────────────────── */
+.dashboard {
+  width: min(98vw, 1880px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 0 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dashboard > section,
+.dashboard > div:not(.header) {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* ── Header ────────────────────────────── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-header);
+  border-bottom: 3px solid var(--brand);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all var(--transition);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.header-scrolled {
+  padding: 0.5rem 1.5rem;
+  box-shadow: 0 6px 30px rgba(59, 130, 246, 0.25);
+}
+
+.header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 1.6vw, 1.5rem);
+  letter-spacing: 0.08em;
+  font-weight: 900;
+  color: var(--text-heading);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-transform: uppercase;
+}
+
+.header h1::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 1.1em;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%);
+  border-radius: 3px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-badge {
+  background: var(--accent);
+  border-radius: 20px;
+  padding: 0.4rem 0.8rem;
+  font-size: clamp(0.8rem, 1vw, 1rem);
+  font-weight: 800;
+  color: #000000;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--brand);
+  transition: all var(--transition);
+  font-family: var(--font);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.action-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.action-btn svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+}
+
+.action-btn-danger {
+  background: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.action-btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* ── KPIs ──────────────────────────────── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.kpi-card {
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  transition: all var(--transition);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.kpi-card.estado-bom {
+  border-color: var(--ok);
+  background: linear-gradient(135deg, var(--danger-bg-strong) 0%, var(--bg-card) 100%);
+}
+
+.kpi-card.estado-critico {
+  border-color: var(--danger);
+  background: linear-gradient(135deg, var(--danger-bg-strong) 0%, var(--bg-card) 100%);
+}
+
+.kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.kpi-label svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+  opacity: 0.9;
+}
+
+.kpi-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 1.5vw, 1.6rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-subvalue {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: clamp(0.7rem, 0.85vw, 0.85rem);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-card.estado-critico .kpi-value {
+  color: var(--danger-light);
+}
+
+.kpi-card.estado-critico .kpi-subvalue {
+  color: var(--danger);
+}
+
+.kpi-card.estado-bom .kpi-value {
+  color: var(--ok-light);
+}
+
+.kpi-card.estado-bom .kpi-subvalue {
+  color: var(--ok);
+}
+
+/* ── Chart Section ─────────────────────── */
+.chart-section {
+  animation: fadeInUp 0.5s 0.1s ease forwards;
+  opacity: 0;
+}
+
+.chart-card {
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  box-shadow: var(--shadow-card);
+}
+
+.chart-card h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-card h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 0.9em;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  max-height: 250px;
+}
+
+.chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Content Grid ─────────────────────── */
+.content-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  animation: fadeInUp 0.5s 0.2s ease forwards;
+  opacity: 0;
+}
+
+/* ── Card / Tabela ─────────────────────── */
+.card {
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  box-shadow: var(--shadow-card);
+}
+
+.card h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 0.9em;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.table-wrap {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-page);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: clamp(0.8rem, 0.95vw, 1rem);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-header);
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-align: center;
+  color: var(--text-heading);
+  letter-spacing: 0.05em;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--brand);
+  border-right: 1px solid var(--border);
+  padding: 0.6rem 0.5rem;
+}
+
+th:last-child, td:last-child { border-right: 0; }
+
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { background: rgba(59, 130, 246, 0.15); }
+.sortable.sort-active {
+  background: rgba(59, 130, 246, 0.25);
+  color: var(--brand);
+}
+
+tbody tr {
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
+tbody tr:hover { background: rgba(59, 130, 246, 0.08); }
+
+td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 0.5rem 0.4rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+tbody td:first-child {
+  font-weight: 800;
+  color: var(--text-heading);
+}
+
+tbody td:nth-child(2),
+tbody td:nth-child(3),
+tbody td:nth-child(4),
+tbody td:nth-child(5),
+thead th:nth-child(2),
+thead th:nth-child(3),
+thead th:nth-child(4),
+thead th:nth-child(5) {
+  text-align: right;
+}
+
+/* ── Setor Cell ─────────────────────────── */
+.setor-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.setor-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+.badge-melhor {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-color: var(--ok);
+}
+
+.badge-critico {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+/* ── Status Colors ─────────────────────── */
+.status-positivo {
+  color: var(--ok-light);
+  font-weight: 700;
+}
+
+.status-negativo {
+  color: var(--danger-light);
+  font-weight: 700;
+}
+
+.diferenca-seta {
+  display: inline-block;
+  font-size: 1em;
+  font-weight: 900;
+  margin-left: 0.2rem;
+  vertical-align: -0.02em;
+}
+
+.cell-input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: right;
+  font: inherit;
+  color: var(--text);
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  transition: all 120ms ease;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-input:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ── Footer ────────────────────────────── */
+.rodape-exportacao {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font);
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* ── Animations ────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ────────────────────────── */
+@media (max-width: 1300px) {
+  body { overflow-x: hidden; }
+  .dashboard { width: 96vw; padding: 0.5rem 0 1rem; }
+  .header { flex-direction: row; align-items: center; gap: 0.5rem; }
+  .kpis { gap: 0.75rem; }
+}
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .action-btn { padding: 0.4rem 0.7rem; font-size: 0.75rem; }
+}
+
+@media (max-width: 600px) {
+  .kpis { grid-template-columns: 1fr 1fr; gap: 0.4rem; }
+  .header { padding: 0.4rem 0.8rem; }
+  .header h1 { font-size: 0.85rem; }
+  table { font-size: 0.7rem; }
+  .date-badge { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+}
+
+/* ── Scrollbar ─────────────────────────── */
+.table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 999px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Progress Bar ─────────────────────── */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.progress-bar-track {
+  width: 80px;
+  max-width: 80px;
+  height: 18px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border-light);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+
+.progress-bar-fill.realizado {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-border) 100%);
+}
+
+.progress-bar-fill.meta {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px dashed var(--border-light);
+}
+
+.progress-bar-text {
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 50px;
+  text-align: right;
+  color: var(--text);
+}
+  </style>
+</head>
+<body>
+  <div id="toast-container"></div>
+
+  <main class="dashboard">
+    <header class="header" id="header">
+      <div class="header-left">
+        <h1 id="titulo">RELATÓRIO DE TROCAS DIÁRIO</h1>
+        <p id="data-referencia" class="date-badge"></p>
+      </div>
+      <div class="header-right">
+        <button id="btn-zerar" class="action-btn action-btn-danger" type="button">
+          X Zerar
+        </button>
+        <button id="btn-salvar" class="action-btn" type="button">
+          Salvar imagem
+        </button>
+      </div>
+    </header>
+
+    <section class="kpis" aria-label="Indicadores gerais">
+      <article class="kpi-card" data-tooltip="Soma de todos os valores realizados no período">
+        <span class="kpi-label">
+          <svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+          TOTAL REALIZADO
+        </span>
+        <strong class="kpi-value" id="kpi-realizado">R$ 0,00</strong>
+      </article>
+      <article class="kpi-card" data-tooltip="Soma de todas as metas do período">
+        <span class="kpi-label">
+          <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          META TOTAL
+        </span>
+        <strong class="kpi-value" id="kpi-meta">R$ 0,00</strong>
+      </article>
+      <article class="kpi-card" id="kpi-card-diferenca" data-tooltip="Diferença entre realizado e meta">
+        <span class="kpi-label">
+          <svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+          DIFERENÇA TOTAL
+        </span>
+        <strong class="kpi-value" id="kpi-diferenca">R$ 0,00</strong>
+        <span class="kpi-subvalue" id="kpi-diferenca-percentual">0,00% na meta total</span>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <div class="card tabela-card">
+        <h2>DETALHAMENTO POR SETOR</h2>
+        <div class="table-wrap">
+          <table aria-label="Tabela de trocas por categoria">
+            <thead>
+              <tr>
+                <th data-sort="setor" class="sortable">SETOR</th>
+                <th data-sort="realizado" class="sortable">REALIZADO</th>
+                <th data-sort="meta" class="sortable">META</th>
+                <th data-sort="diferenca" class="sortable">DIFERENÇA</th>
+                <th data-sort="status" class="sortable">STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+const dashboardMeta = { titulo: "RELATÓRIO DE TROCAS DIÁRIO" };
+
+const dadosTrocas = [
+  { categoria: "AÇOUGUE", realizado: 5267.7, meta: 3000 },
+  { categoria: "BAZAR/ELETRO/FLORES", realizado: 2803.23, meta: 5000 },
+  { categoria: "PETSHOP", realizado: 933.87, meta: 2000 },
+  { categoria: "BEBIDAS", realizado: 21429.61, meta: 7000 },
+  { categoria: "FLC", realizado: 14087.31, meta: 18000 },
+  { categoria: "HIGIENE", realizado: 4537.61, meta: 3500 },
+  { categoria: "PADARIA", realizado: 1883.13, meta: 4000 },
+  { categoria: "LIMPEZA", realizado: 3507.2, meta: 3500 },
+  { categoria: "MERCEARIA", realizado: 50600.61, meta: 47000 }
+];
+
+let dadosAtuais = dadosTrocas.map((item) => ({ ...item }));
+const STORAGE_KEY_DADOS = "trocas_dashboard_dados_v2";
+const ordenacaoTabela = { coluna: null, direcao: "asc" };
+const feedbackEdicao = {};
+const timersFeedback = {};
+const valoresAnterioresKPI = {};
+let graficoSetores = null;
+
+/* ── Utilities ─────────────────────────── */
+function formatBRL(valor) {
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function formatarNumeroEdicao(valor) {
+  return Number(valor).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function parseNumeroBR(valorTexto) {
+  const textoOriginal = String(valorTexto || "").trim();
+  if (!textoOriginal) return null;
+  const limpo = textoOriginal.replace(/\s/g, "").replace(/\./g, "").replace(",", ".").replace(/[^0-9.-]/g, "");
+  if (!limpo || limpo === "-" || limpo === "." || limpo === "-.") return null;
+  const numero = Number(limpo);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+function formatarDiferenca(valor) {
+  const valorFormatado = formatBRL(Math.abs(valor));
+  if (valor > 0) return `${valorFormatado} <span class="diferenca-seta">↑</span>`;
+  if (valor < 0) return `${valorFormatado} <span class="diferenca-seta">↓</span>`;
+  return `${valorFormatado} <span class="diferenca-seta">→</span>`;
+}
+
+function formatarStatusPercentual(realizado, meta) {
+  if (meta === 0) return `0,00% <span class="diferenca-seta">→</span>`;
+  const variacao = ((realizado - meta) / meta) * 100;
+  const pct = `${Math.abs(variacao).toFixed(2).replace(".", ",")}%`;
+  if (variacao > 0) return `${pct} <span class="diferenca-seta">↑</span>`;
+  if (variacao < 0) return `${pct} <span class="diferenca-seta">↓</span>`;
+  return `${pct} <span class="diferenca-seta">→</span>`;
+}
+
+function formatarStatusMetaTotal(totalRealizado, totalMeta) {
+  if (totalMeta === 0) return "0,00% na meta total";
+  const variacao = ((totalRealizado - totalMeta) / totalMeta) * 100;
+  const pct = `${Math.abs(variacao).toFixed(2).replace(".", ",")}%`;
+  if (variacao > 0) return `${pct} acima da meta total`;
+  if (variacao < 0) return `${pct} abaixo da meta total`;
+  return `${pct} na meta total`;
+}
+
+function normalizarTexto(valor) {
+  return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function formatarDataDiaMesAno(data) {
+  return `${String(data.getDate()).padStart(2, "0")}-${String(data.getMonth() + 1).padStart(2, "0")}-${data.getFullYear()}`;
+}
+
+function formatarDataArquivo(data) {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
+}
+
+function chaveFeedback(categoria, campo) {
+  return `${categoria}::${campo}`;
+}
+
+/* ── Status helpers ─────────────────────── */
+function classeStatus(diferenca) {
+  return diferenca > 0 ? "status-negativo" : "status-positivo";
+}
+
+/* ── Toast System ───────────────────────── */
+function mostrarToast(mensagem, tipo) {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${tipo}`;
+
+  const icones = {
+    success: '✓',
+    error: '✗',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+  toast.textContent = `${icones[tipo] || ''} ${mensagem}`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast-exit");
+    setTimeout(() => toast.remove(), 260);
+  }, 3000);
+}
+
+/* ── Data ──────────────────────────────── */
+function salvarDadosLocalmente() {
+  try { localStorage.setItem(STORAGE_KEY_DADOS, JSON.stringify(dadosAtuais)); } catch {}
+}
+
+function carregarDadosLocais() {
+  try {
+    const dadosSalvos = localStorage.getItem(STORAGE_KEY_DADOS);
+    if (!dadosSalvos) return;
+    const parsed = JSON.parse(dadosSalvos);
+    if (!Array.isArray(parsed) || parsed.length !== dadosTrocas.length) return;
+    const mapaOriginal = new Map(dadosTrocas.map((item) => [item.categoria, item]));
+    const restaurados = parsed
+      .filter((item) => item && typeof item.categoria === "string" && mapaOriginal.has(item.categoria))
+      .map((item) => {
+        const original = mapaOriginal.get(item.categoria);
+        const realizado = Number(item.realizado);
+        const meta = Number(item.meta);
+        return {
+          categoria: original.categoria,
+          realizado: Number.isFinite(realizado) && realizado >= 0 ? realizado : original.realizado,
+          meta: Number.isFinite(meta) && meta >= 0 ? meta : original.meta
+        };
+      });
+    if (restaurados.length === dadosTrocas.length) {
+      dadosAtuais = restaurados;
+    }
+  } catch {}
+}
+
+/* ── Computations ──────────────────────── */
+function calcularIndicadores(dados) {
+  const totalRealizado = dados.reduce((acc, item) => acc + item.realizado, 0);
+  const totalMeta = dados.reduce((acc, item) => acc + item.meta, 0);
+  return { totalRealizado, totalMeta, totalDiferenca: totalRealizado - totalMeta };
+}
+
+function obterDestaquesSetores(dados) {
+  if (!dados.length) return { setorMelhor: null, setorCritico: null };
+  const comPct = dados.map((item, index) => ({
+    ...item, index,
+    percentual: item.meta > 0 ? (item.realizado - item.meta) / item.meta : 0
+  }));
+  const melhor = comPct.reduce((acc, atual) => {
+    if (!acc) return atual;
+    if (atual.percentual < acc.percentual) return atual;
+    if (atual.percentual === acc.percentual && atual.index < acc.index) return atual;
+    return acc;
+  }, null);
+  const critico = comPct.reduce((acc, atual) => {
+    if (!acc) return atual;
+    if (atual.percentual > acc.percentual) return atual;
+    if (atual.percentual === acc.percentual && atual.index < acc.index) return atual;
+    return acc;
+  }, null);
+  return {
+    setorMelhor: melhor ? melhor.categoria : null,
+    setorCritico: critico ? critico.categoria : null
+  };
+}
+
+/* ── Count-up Animation ────────────────── */
+function animarValor(elemento, novoValor) {
+  const chave = elemento.id;
+  const antigo = valoresAnterioresKPI[chave];
+  if (antigo === novoValor) return;
+  valoresAnterioresKPI[chave] = novoValor;
+
+  const start = antigo !== undefined ? antigo : novoValor;
+  const duracao = 600;
+  const inicio = performance.now();
+
+  function frame(agora) {
+    const progresso = Math.min((agora - inicio) / duracao, 1);
+    const suavizado = 1 - Math.pow(1 - progresso, 3);
+    const atual = start + (novoValor - start) * suavizado;
+    elemento.textContent = formatBRL(atual);
+    if (progresso < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ── Chart ─────────────────────────────── */
+function getChartColors() {
+  return {
+    realizado: "#3b82f6",
+    realizadoBorder: "#1d4ed8",
+    meta: "rgba(251, 191, 36, 0.6)",
+    grid: "rgba(255, 255, 255, 0.06)",
+    text: "#94a3b8"
+  };
+}
+
+function renderGrafico(dados) {
+  const canvas = document.getElementById("grafico-setores");
+  if (!canvas) return;
+  if (graficoSetores) {
+    graficoSetores.data.labels = dados.map((d) => d.categoria);
+    graficoSetores.data.datasets[0].data = dados.map((d) => d.realizado);
+    graficoSetores.data.datasets[1].data = dados.map((d) => d.meta);
+    graficoSetores.update();
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  const cores = getChartColors();
+  graficoSetores = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: dados.map((d) => d.categoria),
+      datasets: [
+        {
+          label: "Realizado",
+          data: dados.map((d) => d.realizado),
+          backgroundColor: cores.realizado,
+          borderColor: cores.realizadoBorder,
+          borderWidth: 2,
+          borderRadius: 4,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7
+        },
+        {
+          label: "Meta",
+          data: dados.map((d) => d.meta),
+          backgroundColor: cores.meta,
+          borderColor: "rgba(251, 191, 36, 0.8)",
+          borderWidth: 2,
+          borderRadius: 4,
+          barPercentage: 0.65,
+          categoryPercentage: 0.7
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          align: "end",
+          labels: {
+            color: cores.text,
+            font: { weight: "700", size: 10 },
+            boxWidth: 12,
+            boxHeight: 12,
+            padding: 12
+          }
+        },
+        tooltip: {
+          backgroundColor: "rgba(0,0,0,0.8)",
+          titleFont: { weight: "700" },
+          bodyFont: { weight: "600" },
+          padding: 8,
+          cornerRadius: 8,
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${formatBRL(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: cores.grid, drawBorder: false },
+          ticks: { color: cores.text, font: { weight: "600", size: 9 }, maxRotation: 30 },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: cores.grid, drawBorder: false },
+          ticks: { color: cores.text, font: { weight: "600", size: 9 }, callback: (v) => formatBRL(v) },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+/* ── Table Rendering ───────────────────── */
+function montarCelulaSetor(categoria, setorMelhor, setorCritico) {
+  let badge = "";
+  if (categoria === setorMelhor) badge = '<span class="setor-badge badge-melhor">MELHOR</span>';
+  else if (categoria === setorCritico) badge = '<span class="setor-badge badge-critico">CRÍTICO</span>';
+  return `<div class="setor-cell"><span>${categoria}</span>${badge}</div>`;
+}
+
+function renderTabela(dados) {
+  const tbody = document.getElementById("tabela-body");
+  const { setorMelhor, setorCritico } = obterDestaquesSetores(dados);
+  tbody.innerHTML = "";
+
+  dados.forEach((item) => {
+    const diferenca = item.realizado - item.meta;
+    const clRealizado = feedbackEdicao[chaveFeedback(item.categoria, "realizado")] || "";
+    const clMeta = feedbackEdicao[chaveFeedback(item.categoria, "meta")] || "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${montarCelulaSetor(item.categoria, setorMelhor, setorCritico)}</td>
+      <td><input class="cell-input ${clRealizado ? "cell-" + clRealizado : ""}" data-categoria="${item.categoria}" data-campo="realizado" type="text" value="${formatarNumeroEdicao(item.realizado)}"></td>
+      <td><input class="cell-input ${clMeta ? "cell-" + clMeta : ""}" data-categoria="${item.categoria}" data-campo="meta" type="text" value="${formatarNumeroEdicao(item.meta)}"></td>
+      <td class="${classeStatus(diferenca)}">${formatarDiferenca(diferenca)}</td>
+      <td class="${classeStatus(diferenca)}">${formatarStatusPercentual(item.realizado, item.meta)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── Ordering ──────────────────────────── */
+function obterValorOrdenacao(item, coluna) {
+  if (coluna === "setor") return normalizarTexto(item.categoria);
+  if (coluna === "realizado") return item.realizado;
+  if (coluna === "meta") return item.meta;
+  if (coluna === "diferenca") return item.realizado - item.meta;
+  if (coluna === "status") return item.meta === 0 ? 0 : ((item.realizado - item.meta) / item.meta) * 100;
+  return 0;
+}
+
+function ordenarDadosTabela(dados) {
+  if (!ordenacaoTabela.coluna) return dados;
+  const fator = ordenacaoTabela.direcao === "asc" ? 1 : -1;
+  return [...dados].sort((a, b) => {
+    const va = obterValorOrdenacao(a, ordenacaoTabela.coluna);
+    const vb = obterValorOrdenacao(b, ordenacaoTabela.coluna);
+    return va < vb ? -1 * fator : va > vb ? 1 * fator : 0;
+  });
+}
+
+function atualizarIndicadorOrdenacaoCabecalho() {
+  document.querySelectorAll("th.sortable").forEach((th) => {
+    const coluna = th.dataset.sort;
+    const textos = {
+      setor: "SETOR",
+      realizado: "REALIZADO",
+      meta: "META",
+      diferenca: "DIFERENÇA",
+      status: "STATUS"
+    };
+    const base = textos[coluna] || coluna;
+    const ativa = coluna === ordenacaoTabela.coluna;
+    const suf = ativa ? (ordenacaoTabela.direcao === "asc" ? " ↑" : " ↓") : "";
+    th.textContent = `${base}${suf}`;
+    th.classList.toggle("sort-active", ativa);
+  });
+}
+
+/* ── Edit Feedback ─────────────────────── */
+function aplicarFeedbackEdicao(categoria, campo, tipo) {
+  const chave = chaveFeedback(categoria, campo);
+  feedbackEdicao[chave] = tipo;
+  if (timersFeedback[chave]) clearTimeout(timersFeedback[chave]);
+  timersFeedback[chave] = setTimeout(() => {
+    delete feedbackEdicao[chave];
+    delete timersFeedback[chave];
+    atualizarDashboard();
+  }, 900);
+}
+
+function atualizarValorItem(categoria, campo, valorTexto) {
+  const item = dadosAtuais.find((d) => d.categoria === categoria);
+  if (!item || (campo !== "realizado" && campo !== "meta")) return;
+  const novoValor = parseNumeroBR(valorTexto);
+  if (novoValor === null || novoValor < 0) {
+    aplicarFeedbackEdicao(categoria, campo, "erro");
+    atualizarDashboard();
+    return;
+  }
+  item[campo] = novoValor;
+  aplicarFeedbackEdicao(categoria, campo, "ok");
+  salvarDadosLocalmente();
+  atualizarDashboard();
+  mostrarToast(`${categoria}: ${campo} atualizado`, "success");
+}
+
+function confirmarEdicaoPendente() {
+  const ativo = document.activeElement;
+  if (ativo instanceof HTMLInputElement && ativo.classList.contains("cell-input")) {
+    ativo.blur();
+  }
+}
+
+/* ── KPIs ──────────────────────────────── */
+function renderKPIs(indicadores) {
+  animarValor(document.getElementById("kpi-realizado"), indicadores.totalRealizado);
+  document.getElementById("kpi-meta").textContent = formatBRL(indicadores.totalMeta);
+
+  const diffEl = document.getElementById("kpi-diferenca");
+  const diffPctEl = document.getElementById("kpi-diferenca-percentual");
+  const cardDiff = document.getElementById("kpi-card-diferenca");
+
+  diffEl.innerHTML = formatarDiferenca(indicadores.totalDiferenca);
+  diffPctEl.textContent = formatarStatusMetaTotal(indicadores.totalRealizado, indicadores.totalMeta);
+
+  const critico = indicadores.totalDiferenca > 0;
+  cardDiff.classList.toggle("estado-critico", critico);
+  cardDiff.classList.toggle("estado-bom", !critico);
+}
+
+/* ── Dashboard Update ──────────────────── */
+function atualizarDashboard() {
+  const indicadores = calcularIndicadores(dadosAtuais);
+  const dadosOrdenados = ordenarDadosTabela(dadosAtuais);
+  renderKPIs(indicadores);
+  renderTabela(dadosOrdenados);
+}
+
+/* ── Actions ───────────────────────────── */
+function zerarTrocas() {
+  dadosAtuais = dadosAtuais.map((item) => ({ ...item, realizado: 0 }));
+  salvarDadosLocalmente();
+  atualizarDashboard();
+  mostrarToast("Valores zerados com sucesso", "warning");
+}
+
+async function salvarImagemDashboard(btnSalvar) {
+  const container = document.querySelector(".dashboard");
+  if (!container || typeof htmlToImage === "undefined") return;
+
+  if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = "Gerando..."; }
+
+  const contentGrid = container.querySelector(".content-grid");
+  const card = container.querySelector(".card");
+  const tableWrap = container.querySelector(".table-wrap");
+
+  const saved = {
+    containerHeight: container.style.height,
+    contentGridMinH: contentGrid ? contentGrid.style.minHeight : "",
+    cardMinHeight: card ? card.style.minHeight : "",
+    cardHeight: card ? card.style.height : "",
+    tableWrapOverflow: tableWrap ? tableWrap.style.overflow : "",
+    tableWrapHeight: tableWrap ? tableWrap.style.height : "",
+  };
+
+  document.documentElement.style.overflow = "visible";
+  document.documentElement.style.height = "auto";
+  document.body.style.overflow = "visible";
+  document.body.style.height = "auto";
+  container.style.height = "auto";
+  if (contentGrid) contentGrid.style.minHeight = "auto";
+  if (card) { card.style.minHeight = "auto"; card.style.height = "auto"; }
+  if (tableWrap) { tableWrap.style.overflow = "visible"; tableWrap.style.height = "auto"; }
+
+  const rodape = document.createElement("div");
+  rodape.className = "rodape-exportacao";
+  const agora = new Date();
+  rodape.textContent = `Gerado em ${formatarDataDiaMesAno(agora)} às ${String(agora.getHours()).padStart(2,"0")}:${String(agora.getMinutes()).padStart(2,"0")}`;
+  container.appendChild(rodape);
+
+  if (btnSalvar) btnSalvar.textContent = "Salvando...";
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  const dataUrl = await htmlToImage.toPng(container, {
+    backgroundColor: "#0b1525",
+    pixelRatio: Math.max(2, window.devicePixelRatio || 1),
+  });
+
+  container.removeChild(rodape);
+  Object.assign(document.documentElement.style, { overflow: "", height: "" });
+  Object.assign(document.body.style, { overflow: "", height: "" });
+  container.style.height = saved.containerHeight;
+  if (contentGrid) contentGrid.style.minHeight = saved.contentGridMinH;
+  if (card) { card.style.minHeight = saved.cardMinHeight; card.style.height = saved.cardHeight; }
+  if (tableWrap) { tableWrap.style.overflow = saved.tableWrapOverflow; tableWrap.style.height = saved.tableWrapHeight; }
+
+  if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = "Salvar imagem"; }
+
+  const link = document.createElement("a");
+  link.href = dataUrl;
+  link.download = `relatorio-trocas-${formatarDataArquivo(new Date())}.png`;
+  link.click();
+}
+
+/* ── Header scroll effect ──────────────── */
+function initScrollHeader() {
+  const header = document.getElementById("header");
+  if (!header) return;
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      header.classList.toggle("header-scrolled", entry.boundingClientRect.top < 0);
+    },
+    { rootMargin: "-1px 0px 0px 0px", threshold: 0 }
+  );
+  observer.observe(header);
+}
+
+/* ── Date ──────────────────────────────── */
+function atualizarDataReferencia() {
+  document.getElementById("data-referencia").textContent = formatarDataDiaMesAno(new Date());
+}
+
+/* ── Init ──────────────────────────────── */
+function iniciarDashboard() {
+  document.getElementById("titulo").textContent = dashboardMeta.titulo;
+  atualizarDataReferencia();
+  carregarDadosLocais();
+  atualizarDashboard();
+  initScrollHeader();
+
+  document.getElementById("btn-zerar").addEventListener("click", zerarTrocas);
+  
+  const btnSalvar = document.getElementById("btn-salvar");
+  btnSalvar.addEventListener("click", () => {
+    salvarImagemDashboard(btnSalvar).catch(() => {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = "Salvar imagem";
+    });
+  });
+
+  const tbody = document.getElementById("tabela-body");
+  tbody.addEventListener("blur", (e) => {
+    const alvo = e.target;
+    if (alvo instanceof HTMLInputElement && alvo.classList.contains("cell-input")) {
+      atualizarValorItem(alvo.dataset.categoria, alvo.dataset.campo, alvo.value);
+    }
+  }, true);
+
+  tbody.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement && e.target.classList.contains("cell-input") && e.key === "Enter") {
+      e.preventDefault();
+      e.target.blur();
+    }
+  });
+
+  tbody.addEventListener("focusin", (e) => {
+    if (e.target instanceof HTMLInputElement && e.target.classList.contains("cell-input")) {
+      requestAnimationFrame(() => e.target.select());
+    }
+  });
+
+  tbody.addEventListener("click", (e) => {
+    if (e.target instanceof HTMLInputElement && e.target.classList.contains("cell-input")) {
+      e.target.select();
+    }
+  });
+
+  document.querySelectorAll("th.sortable").forEach((th) => {
+    th.addEventListener("click", () => {
+      confirmarEdicaoPendente();
+      const coluna = th.dataset.sort;
+      if (ordenacaoTabela.coluna === coluna) {
+        ordenacaoTabela.direcao = ordenacaoTabela.direcao === "asc" ? "desc" : "asc";
+      } else {
+        ordenacaoTabela.coluna = coluna;
+        ordenacaoTabela.direcao = "asc";
+      }
+      atualizarIndicadorOrdenacaoCabecalho();
+      atualizarDashboard();
+    });
+  });
+
+  atualizarIndicadorOrdenacaoCabecalho();
+}
+
+window.addEventListener("DOMContentLoaded", iniciarDashboard);
+  </script>
+</body>
+</html>
