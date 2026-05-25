@@ -8,18 +8,24 @@ interface DateOption {
   createdAt: string
 }
 
+// Retorna data local no formato YYYY-MM-DD (sem timezone issues)
+function getLocalDateString(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 // Converte string ISO "2026-05-25T00:00:00.000Z" para "2026-05-25"
 function isoToDateOnly(isoStr: string): string {
   if (!isoStr) return ''
-  // Se já está no formato YYYY-MM-DD, retorna direto
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) return isoStr
-  // Caso contrário, extrai a data do ISO
   const parts = isoStr.split('T')
   return parts[0] || ''
 }
 
 function formatDateDisplay(dateStr: string): string {
-  // Aceita tanto "2026-05-25" quanto "2026-05-25T00:00:00.000Z"
   const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00')
   const dia = String(d.getDate()).padStart(2, '0')
   const mes = String(d.getMonth() + 1).padStart(2, '0')
@@ -32,11 +38,7 @@ function formatDateValue(dateStr: string): string {
 }
 
 function isToday(dateStr: string): boolean {
-  const today = new Date()
-  const y = today.getFullYear()
-  const m = today.getMonth() + 1
-  const day = today.getDate()
-return formatDateValue(dateStr) === `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return formatDateValue(dateStr) === getLocalDateString()
 }
 
 interface DateSelectorProps {
@@ -97,11 +99,11 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
           cursor: 'pointer',
         }}
       >
-        <option value={formatDateValue(new Date().toISOString())}>
-          Hoje ({formatDateDisplay(new Date().toISOString())})
+        <option value={getLocalDateString()}>
+          Hoje ({formatDateDisplay(getLocalDateString())})
         </option>
         {dates
-          .filter((d) => d.data !== formatDateValue(new Date().toISOString()))
+          .filter((d) => d.data !== getLocalDateString())
           .map((d) => (
             <option key={d.id} value={formatDateValue(d.data)}>
               {formatDateDisplay(d.data)}
