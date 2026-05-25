@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import prisma from '@/app/lib/prisma'
+import { prisma } from '@/app/lib/prisma'
 
 async function getUser(username: string) {
   return await prisma.user.findUnique({ where: { username } })
