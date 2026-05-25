@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { Role } from '@prisma/client'
+import { Role } from './types'
 
 const JWT_SECRET = process.env.JWT_SECRET
 
