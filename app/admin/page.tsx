@@ -2,7 +2,14 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/app/lib/session'
 
 export default async function AdminHome() {
-  const session = await getSession()
+  let session = null
+  try {
+    session = await getSession()
+  } catch (error) {
+    console.error('[admin] Error getting session:', error)
+    // Em caso de erro, redirecionar para login
+    redirect('/login')
+  }
 
   if (!session || session.role !== 'ADMIN') {
     redirect('/login')

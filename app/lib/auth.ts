@@ -4,8 +4,12 @@ import { Role } from './types'
 
 const JWT_SECRET = process.env.JWT_SECRET
 
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('JWT_SECRET environment variable is required in production')
+// Debug log para ajudar a identificar o problema em produção
+if (!JWT_SECRET) {
+  console.error('[auth] JWT_SECRET não está definido!')
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production')
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {
