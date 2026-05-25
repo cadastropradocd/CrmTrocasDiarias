@@ -121,7 +121,9 @@ export async function PUT(req: Request) {
 
     let trocaDia = await prisma.trocaDia.findUnique({ where: { data: utcDate } })
     if (!trocaDia) {
-      trocaDia = await prisma.trocaDia.create({ data: utcDate as never })
+      trocaDia = await prisma.trocaDia.create({
+        data: { data: utcDate }
+      })
     }
 
     for (const reg of registros) {
