@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { prisma } from '@/app/lib/prisma'
+import { getSession } from '@/app/lib/session'
 
-async function getAdminUser() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('token')?.value
-  if (!token) return null
-
-  const user = await prisma.user.findUnique({ where: { username: token } })
-  if (!user || user.role !== 'ADMIN') return null
-
-  return user
+async function requireAdmin() {
+  const session = await getSession()
+  if (!session || session.role !== 'ADMIN') {
+    return null
+  }
+  return session
 }
 
 export async function GET() {
   try {
-    const user = await getAdminUser()
-    if (!user) {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
@@ -33,8 +30,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAdminUser()
-    if (!user) {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
@@ -73,8 +70,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const user = await getAdminUser()
-    if (!user) {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
@@ -124,8 +121,8 @@ export async function PUT(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await getAdminUser()
-    if (!user) {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
@@ -152,8 +149,8 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getAdminUser()
-    if (!user) {
+    const session = await requireAdmin()
+    if (!session) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 

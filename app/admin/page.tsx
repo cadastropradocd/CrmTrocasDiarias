@@ -1,22 +1,10 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { prisma } from '@/app/lib/prisma'
-
-async function getUser(username: string) {
-  return await prisma.user.findUnique({ where: { username } })
-}
+import { getSession } from '@/app/lib/session'
 
 export default async function AdminHome() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('token')?.value
+  const session = await getSession()
 
-  if (!token) {
-    redirect('/login')
-  }
-
-  const user = await getUser(token)
-
-  if (!user || user.role !== 'ADMIN') {
+  if (!session || session.role !== 'ADMIN') {
     redirect('/login')
   }
 
@@ -24,7 +12,7 @@ export default async function AdminHome() {
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Painel Admin</h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-        Bem-vindo, {user.name}
+        Bem-vindo, {session.name}
       </p>
 
       <div style={{
