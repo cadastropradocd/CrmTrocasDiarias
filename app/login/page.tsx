@@ -36,7 +36,7 @@ export default function LoginPage() {
       if (data.role === 'ADMIN') {
         router.push('/admin')
       } else {
-        router.push('/')
+        router.push('/comercial')
       }
     } catch {
       setError('Erro de conexão com o servidor')
