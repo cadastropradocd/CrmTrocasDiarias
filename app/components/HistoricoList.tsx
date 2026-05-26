@@ -43,10 +43,16 @@ function formatStatusPct(realizado: number, meta: number): string {
   return `${pct} na meta`
 }
 
-export default function HistoricoList() {
+interface Props {
+  isComercial?: boolean
+}
+
+export default function HistoricoList({ isComercial = false }: Props) {
   const router = useRouter()
   const [historico, setHistorico] = useState<HistoricoItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  const basePath = isComercial ? '/comercial/historico' : '/admin/historico'
 
   useEffect(() => {
     async function fetchData() {
@@ -69,7 +75,7 @@ export default function HistoricoList() {
   }, [])
 
   async function handleViewDetails(data: string) {
-    router.push(`/admin/historico/${data}`)
+    router.push(`${basePath}/${data}`)
   }
 
   async function logout() {
@@ -96,13 +102,15 @@ export default function HistoricoList() {
             <h1>HISTÓRICO DE TROCAS</h1>
           </div>
           <div className="header-right">
-            <button
-              className="action-btn"
-              onClick={() => router.push('/admin/trocas')}
-              style={{ background: 'var(--accent)', color: 'var(--bg)', fontWeight: 700 }}
-            >
-              ➕ Lançar Hoje
-            </button>
+            {!isComercial && (
+              <button
+                className="action-btn"
+                onClick={() => router.push('/admin/trocas')}
+                style={{ background: 'var(--accent)', color: 'var(--bg)', fontWeight: 700 }}
+              >
+                ➕ Lançar Hoje
+              </button>
+            )}
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
               {typeof window !== 'undefined' ? sessionStorage.getItem('userName') : ''}
             </span>
@@ -114,7 +122,7 @@ export default function HistoricoList() {
           <div className="card">
             {historico.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', padding: '2rem', textAlign: 'center' }}>
-                Nenhum registro encontrado. Clique em &quot;Lançar Hoje&quot; para começar.
+                Nenhum registro encontrado.
               </p>
             ) : (
               <div className="table-wrap">

@@ -1,5 +1,5 @@
 import HistoricoList from '@/app/components/HistoricoList'
 
 export default function ComercialHistoricoPage() {
-  return <HistoricoList basePath="/comercial/historico" />
+  return <HistoricoList isComercial={true} />
 }

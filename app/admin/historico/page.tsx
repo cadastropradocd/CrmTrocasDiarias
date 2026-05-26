@@ -11,5 +11,5 @@ export default async function HistoricoPage() {
     redirect('/login')
   }
 
-  return <HistoricoList basePath="/admin/historico" />
+  return <HistoricoList isComercial={false} />
 }
