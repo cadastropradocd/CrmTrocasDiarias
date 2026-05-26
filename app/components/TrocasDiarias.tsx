@@ -111,6 +111,7 @@ export default function TrocasDiarias() {
           registros: departamentos.map((d) => ({
             nome: d.nome,
             realizado: d.realizado || 0,
+            meta: d.meta || 0,
           })),
         }),
       })

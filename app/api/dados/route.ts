@@ -119,10 +119,23 @@ export async function PUT(req: Request) {
       return {
         nome: String(reg.nome),
         realizado: Number(reg.realizado),
+        meta: typeof reg.meta === 'number' && Number.isFinite(reg.meta) ? Number(reg.meta) : 0,
       }
     })
 
     const today = todayString()
+
+    const { data: departamentos } = await supabase
+      .from('Departamento')
+      .select('id, nome, meta')
+      .in('nome', registros.map((r) => r.nome))
+
+    const metaMap: Record<string, number> = {}
+    if (departamentos) {
+      for (const d of departamentos) {
+        metaMap[d.nome] = d.meta
+      }
+    }
 
     let trocaDiaId: number
 
@@ -134,6 +147,11 @@ export async function PUT(req: Request) {
 
     if (existing) {
       trocaDiaId = existing.id
+
+      await supabase
+        .from('Registro')
+        .delete()
+        .eq('trocaDiaId', trocaDiaId)
     } else {
       const { data: created, error: createError } = await supabase
         .from('TrocaDia')
@@ -145,21 +163,18 @@ export async function PUT(req: Request) {
         throw new Error('Erro ao criar TrocaDia')
       }
       trocaDiaId = created.id
-
-      await supabase
-        .from('Registro')
-        .delete()
-        .eq('trocaDiaId', trocaDiaId)
     }
 
     for (const reg of registros) {
+      const metaValor = metaMap[reg.nome] ?? reg.meta
+
       const { error: insertError } = await supabase
         .from('Registro')
         .insert({
           trocaDiaId,
           categoria: reg.nome,
           realizado: reg.realizado,
-          meta: 0,
+          meta: metaValor,
         })
 
       if (insertError) {
