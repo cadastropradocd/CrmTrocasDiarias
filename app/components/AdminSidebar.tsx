@@ -11,10 +11,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', href: '/admin', icon: '🏠' },
-  { label: 'Departamentos', href: '/admin/departamentos', icon: '📦' },
-  { label: 'Trocas Diárias', href: '/admin/trocas', icon: '📊' },
-  { label: 'Histórico', href: '/admin/historico', icon: '📋' },
+  { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+  { label: 'Histórico', href: '/historico', icon: '📋' },
+  { label: 'Departamentos', href: '/departamentos', icon: '📦' },
   { label: 'Sair', href: '/login', icon: '🚪' },
 ]
 
@@ -61,7 +60,7 @@ export default function AdminSidebar() {
       {/* Nav items */}
       <nav style={{ flex: 1 }}>
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || (item.href === '/admin' && pathname === '/admin')
+          const isActive = pathname === item.href
           return (
             <Link
               key={item.href}

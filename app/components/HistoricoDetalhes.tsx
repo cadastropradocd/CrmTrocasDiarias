@@ -55,10 +55,9 @@ function classeStatus(diferenca: number): string {
 
 interface Props {
   data: string
-  basePath?: string
 }
 
-export default function HistoricoDetalhes({ data, basePath = '/admin/historico' }: Props) {
+export default function HistoricoDetalhes({ data }: Props) {
   const router = useRouter()
   const [detalhes, setDetalhes] = useState<DetalhesData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -70,7 +69,7 @@ export default function HistoricoDetalhes({ data, basePath = '/admin/historico' 
         if (!res.ok) {
           if (res.status === 404) {
             showToast('Nenhum registro para esta data', 'error')
-            router.push(basePath)
+            router.push('/historico')
             return
           }
           showToast('Erro ao carregar detalhes', 'error')
@@ -86,7 +85,7 @@ export default function HistoricoDetalhes({ data, basePath = '/admin/historico' 
       }
     }
     fetchData()
-  }, [data, router, basePath])
+  }, [data, router])
 
   async function logout() {
     try {
@@ -122,7 +121,7 @@ export default function HistoricoDetalhes({ data, basePath = '/admin/historico' 
           <div className="header-right">
             <button
               className="action-btn"
-              onClick={() => router.push('/admin/historico')}
+              onClick={() => router.push('/historico')}
               style={{ background: 'transparent', border: '1px solid var(--border-light)' }}
             >
               ← Voltar

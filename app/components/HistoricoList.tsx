@@ -44,15 +44,15 @@ function formatStatusPct(realizado: number, meta: number): string {
 }
 
 interface Props {
-  isComercial?: boolean
+  isAdmin?: boolean
 }
 
-export default function HistoricoList({ isComercial = false }: Props) {
+export default function HistoricoList({ isAdmin = false }: Props) {
   const router = useRouter()
   const [historico, setHistorico] = useState<HistoricoItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const basePath = isComercial ? '/comercial/historico' : '/admin/historico'
+  const basePath = '/historico'
 
   useEffect(() => {
     async function fetchData() {
@@ -102,10 +102,10 @@ export default function HistoricoList({ isComercial = false }: Props) {
             <h1>HISTÓRICO DE TROCAS</h1>
           </div>
           <div className="header-right">
-            {!isComercial && (
+            {isAdmin && (
               <button
                 className="action-btn"
-                onClick={() => router.push('/admin/trocas')}
+                onClick={() => router.push('/dashboard')}
                 style={{ background: 'var(--accent)', color: 'var(--bg)', fontWeight: 700 }}
               >
                 ➕ Lançar Hoje

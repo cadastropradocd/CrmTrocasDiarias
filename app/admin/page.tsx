@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import { redirect } from 'next/navigation'
 import { getSession } from '@/app/lib/session'
 
@@ -44,7 +42,7 @@ export default async function AdminHome() {
   }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
       <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Painel Admin</h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
         Bem-vindo, {session.name}
@@ -57,22 +55,22 @@ export default async function AdminHome() {
         marginTop: '2rem'
       }}>
         <AdminCard
-          href="/admin/departamentos"
-          emoji="📦"
-          title="Departamentos"
-          description="Gerenciar categorias e metas"
-        />
-        <AdminCard
-          href="/admin/trocas"
+          href="/dashboard"
           emoji="📊"
           title="Trocas Diárias"
           description="Lançar trocas do dia"
         />
         <AdminCard
-          href="/admin/historico"
+          href="/historico"
           emoji="📋"
           title="Histórico"
           description="Ver registros anteriores"
+        />
+        <AdminCard
+          href="/departamentos"
+          emoji="📦"
+          title="Departamentos"
+          description="Gerenciar categorias e metas"
         />
       </div>
     </div>

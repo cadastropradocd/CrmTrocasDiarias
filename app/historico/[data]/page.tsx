@@ -2,20 +2,17 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/app/lib/session'
 import HistoricoDetalhes from '@/app/components/HistoricoDetalhes'
 
-export const dynamic = 'force-dynamic'
-
 interface Props {
   params: Promise<{ data: string }>
 }
 
-export default async function HistoricoDataPage({ params }: Props) {
+export default async function HistoricoDetalhesPage({ params }: Props) {
   const session = await getSession()
+  const { data } = await params
 
-  if (!session || session.role !== 'ADMIN') {
+  if (!session) {
     redirect('/login')
   }
 
-  const { data } = await params
-
-  return <HistoricoDetalhes data={data} basePath="/admin/historico" />
+  return <HistoricoDetalhes data={data} />
 }

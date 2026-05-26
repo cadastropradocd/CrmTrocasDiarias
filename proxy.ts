@@ -14,7 +14,14 @@ export default async function proxy(req: NextRequest) {
 
   if (path === '/login') {
     if (session) {
-      return NextResponse.redirect(new URL(session.role === 'ADMIN' ? '/admin' : '/comercial', req.nextUrl))
+      return NextResponse.redirect(new URL(session.role === 'ADMIN' ? '/admin' : '/dashboard', req.nextUrl))
+    }
+    return NextResponse.next()
+  }
+
+  if (path === '/departamentos') {
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', req.nextUrl))
     }
     return NextResponse.next()
   }
@@ -26,7 +33,7 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
-  if (path === '/') {
+  if (path === '/dashboard' || path === '/historico' || path === '/') {
     if (!session) {
       return NextResponse.redirect(new URL('/login', req.nextUrl))
     }
