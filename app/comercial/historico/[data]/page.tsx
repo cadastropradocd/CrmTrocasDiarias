@@ -6,5 +6,5 @@ interface Props {
 
 export default async function ComercialHistoricoDetalhesPage({ params }: Props) {
   const { data } = await params
-  return <HistoricoDetalhes data={data} />
+  return <HistoricoDetalhes data={data} basePath="/comercial/historico" />
 }

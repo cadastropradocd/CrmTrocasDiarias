@@ -17,5 +17,5 @@ export default async function HistoricoDataPage({ params }: Props) {
 
   const { data } = await params
 
-  return <HistoricoDetalhes data={data} />
+  return <HistoricoDetalhes data={data} basePath="/admin/historico" />
 }
