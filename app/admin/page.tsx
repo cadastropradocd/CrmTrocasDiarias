@@ -66,7 +66,13 @@ export default async function AdminHome() {
           href="/admin/trocas"
           emoji="📊"
           title="Trocas Diárias"
-          description="Ver histórico completo"
+          description="Lançar trocas do dia"
+        />
+        <AdminCard
+          href="/admin/historico"
+          emoji="📋"
+          title="Histórico"
+          description="Ver registros anteriores"
         />
       </div>
     </div>

@@ -4,53 +4,67 @@ import { getSession } from '@/app/lib/session'
 import { verifyToken } from '@/app/lib/auth'
 import { Role } from '@/app/lib/types'
 
-function toDateOnly(d: Date): Date {
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0))
+function todayString(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function toDateOnlyString(d: Date): string {
-  return d.toISOString().split('T')[0]
-}
-
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const dateStr = searchParams.get('date')
-
-  let data: Date
-  if (dateStr) {
-    const parsed = new Date(dateStr + 'T00:00:00Z')
-    if (isNaN(parsed.getTime())) {
-      return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
-    }
-    data = toDateOnly(parsed)
-  } else {
-    data = toDateOnly(new Date())
-  }
-
+export async function GET() {
   const session = await getSession()
   if (!session) {
-    const authHeader = req.headers.get('authorization')
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-    if (!token || !verifyToken(token)) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  }
+
+  const today = todayString()
+
+  const { data: departamentos, error: deptError } = await supabase
+    .from('Departamento')
+    .select('id, nome, meta')
+    .order('nome', { ascending: true })
+
+  if (deptError) {
+    console.error('[dados] Error fetching departamentos:', deptError)
+    return NextResponse.json({ error: 'Erro ao buscar departamentos' }, { status: 500 })
+  }
+
+  const { data: trocaDia } = await supabase
+    .from('TrocaDia')
+    .select('id, data')
+    .eq('data', today)
+    .single()
+
+  let registros: Record<string, { realizado: number; meta: number }> = {}
+  if (trocaDia) {
+    const { data: regs } = await supabase
+      .from('Registro')
+      .select('categoria, realizado, meta')
+      .eq('trocaDiaId', trocaDia.id)
+
+    if (regs) {
+      for (const r of regs) {
+        registros[r.categoria] = { realizado: r.realizado, meta: r.meta }
+      }
     }
   }
 
-  const { data: trocaDia, error } = await supabase
-    .from('TrocaDia')
-    .select('*, Registro:categoria, realizado, meta, trocaDiaId(*)')
-    .eq('data', toDateOnlyString(data))
-    .single()
+  const result = departamentos.map((d) => {
+    const reg = registros[d.nome] || { realizado: 0, meta: 0 }
+    return {
+      id: d.id,
+      nome: d.nome,
+      meta: d.meta,
+      realizado: reg.realizado,
+    }
+  })
 
-  if (error && error.code !== 'PGRST116') {
-    return NextResponse.json(null)
-  }
-
-  if (!trocaDia) {
-    return NextResponse.json(null)
-  }
-
-  return NextResponse.json(trocaDia)
+  return NextResponse.json({
+    data: today,
+    departamentos: result,
+    trocasDiariasId: trocaDia?.id || null,
+  })
 }
 
 export async function PUT(req: Request) {
@@ -87,14 +101,6 @@ export async function PUT(req: Request) {
 
     const payload = body as Record<string, unknown>
 
-    if (typeof payload.date !== 'string' || !payload.date) {
-      return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
-    }
-    const dateObj = new Date(payload.date + 'T00:00:00Z')
-    if (isNaN(dateObj.getTime())) {
-      return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
-    }
-
     if (!Array.isArray(payload.registros)) {
       return NextResponse.json({ error: 'Registros inválidos' }, { status: 400 })
     }
@@ -104,72 +110,65 @@ export async function PUT(req: Request) {
         throw new Error('Registro inválido')
       }
       const reg = r as Record<string, unknown>
-      if (typeof reg.categoria !== 'string' || !reg.categoria) {
-        throw new Error('Categoria inválida')
+      if (typeof reg.nome !== 'string' || !reg.nome) {
+        throw new Error('Nome inválido')
       }
       if (typeof reg.realizado !== 'number' || !Number.isFinite(reg.realizado)) {
         throw new Error('Realizado inválido')
       }
-      if (typeof reg.meta !== 'number' || !Number.isFinite(reg.meta)) {
-        throw new Error('Meta inválida')
-      }
       return {
-        categoria: String(reg.categoria),
+        nome: String(reg.nome),
         realizado: Number(reg.realizado),
-        meta: Number(reg.meta),
       }
     })
 
-    const utcDate = toDateOnlyString(dateObj)
+    const today = todayString()
 
-    const { data: existing, error: findError } = await supabase
+    let trocaDiaId: number
+
+    const { data: existing } = await supabase
       .from('TrocaDia')
-      .select('*')
-      .eq('data', utcDate)
+      .select('id')
+      .eq('data', today)
       .single()
 
-    let trocaDia = existing
-    if (!trocaDia) {
+    if (existing) {
+      trocaDiaId = existing.id
+    } else {
       const { data: created, error: createError } = await supabase
         .from('TrocaDia')
-        .insert({ data: utcDate })
+        .insert({ data: today })
         .select()
         .single()
 
       if (createError || !created) {
         throw new Error('Erro ao criar TrocaDia')
       }
-      trocaDia = created
+      trocaDiaId = created.id
+
+      await supabase
+        .from('Registro')
+        .delete()
+        .eq('trocaDiaId', trocaDiaId)
     }
 
     for (const reg of registros) {
-      const { error: upsertError } = await supabase
+      const { error: insertError } = await supabase
         .from('Registro')
-        .upsert({
-          trocaDiaId: trocaDia.id,
-          categoria: reg.categoria,
+        .insert({
+          trocaDiaId,
+          categoria: reg.nome,
           realizado: reg.realizado,
-          meta: reg.meta,
-        }, {
-          onConflict: 'trocaDiaId,categoria'
+          meta: 0,
         })
 
-      if (upsertError) {
-        throw upsertError
+      if (insertError) {
+        console.error('[dados] Error inserting registro:', insertError)
+        throw insertError
       }
     }
 
-    const { data: updated, error: fetchError } = await supabase
-      .from('TrocaDia')
-      .select('*')
-      .eq('id', trocaDia.id)
-      .single()
-
-    if (fetchError || !updated) {
-      throw new Error('Erro ao buscar atualizado')
-    }
-
-    return NextResponse.json(updated)
+    return NextResponse.json({ success: true, data: today })
   } catch (err) {
     console.error('[dados] ERROR:', err)
     return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
