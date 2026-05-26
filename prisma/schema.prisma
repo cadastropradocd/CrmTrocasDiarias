@@ -7,6 +7,13 @@ datasource db {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Departamento {
+  id   Int    @id @default(autoincrement())
+  nome String @unique
+  meta Float
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model Registro {
   id         Int      @id @default(autoincrement())
   categoria  String

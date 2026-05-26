@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   const trocaDia = await prisma.trocaDia.findUnique({
     where: { data },
     include: {
-      registros: {
+      Registro: {
         orderBy: { categoria: 'asc' },
       },
     },
@@ -136,7 +136,7 @@ export async function PUT(req: Request) {
 
     const updated = await prisma.trocaDia.findUnique({
       where: { id: trocaDia.id },
-      include: { registros: { orderBy: { categoria: 'asc' } } },
+      include: { Registro: { orderBy: { categoria: 'asc' } } },
     })
 
     return NextResponse.json(updated)
