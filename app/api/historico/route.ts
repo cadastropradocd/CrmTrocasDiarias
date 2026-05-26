@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/app/lib/prisma'
+import { supabase } from '@/app/lib/supabase'
 import { getSession } from '@/app/lib/session'
 
 export async function GET() {
@@ -8,10 +8,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const trocas = await prisma.trocaDia.findMany({
-    orderBy: { data: 'desc' },
-    select: { id: true, data: true, createdAt: true },
-  })
+  const { data: trocas, error } = await supabase
+    .from('TrocaDia')
+    .select('id, data, createdAt')
+    .order('data', { ascending: false })
+
+  if (error) {
+    return NextResponse.json({ error: 'Erro ao buscar histórico' }, { status: 500 })
+  }
 
   return NextResponse.json(trocas)
 }

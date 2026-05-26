@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/lib/prisma'
+import { supabase } from '@/app/lib/supabase'
 import { getSession } from '@/app/lib/session'
 
 async function requireAdmin() {
@@ -17,9 +17,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const departamentos = await prisma.departamento.findMany({
-      orderBy: { nome: 'asc' },
-    })
+    const { data: departamentos, error } = await supabase
+      .from('Departamento')
+      .select('*')
+      .order('nome', { ascending: true })
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json(departamentos)
   } catch (error) {
@@ -46,20 +51,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Meta inválida' }, { status: 400 })
     }
 
-    const existing = await prisma.departamento.findUnique({
-      where: { nome: nome.trim().toUpperCase() },
-    })
+    const { data: existing } = await supabase
+      .from('Departamento')
+      .select('*')
+      .eq('nome', nome.trim().toUpperCase())
+      .single()
 
     if (existing) {
       return NextResponse.json({ error: 'Já existe um departamento com este nome' }, { status: 409 })
     }
 
-    const departamento = await prisma.departamento.create({
-      data: {
+    const { data: departamento, error } = await supabase
+      .from('Departamento')
+      .insert({
         nome: nome.trim().toUpperCase(),
         meta,
-      },
-    })
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json(departamento, { status: 201 })
   } catch (error) {
@@ -93,24 +106,30 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Meta inválida' }, { status: 400 })
     }
 
-    const existing = await prisma.departamento.findFirst({
-      where: {
-        nome: nome.trim().toUpperCase(),
-        NOT: { id },
-      },
-    })
+    const { data: existing } = await supabase
+      .from('Departamento')
+      .select('*')
+      .eq('nome', nome.trim().toUpperCase())
+      .neq('id', id)
+      .maybeSingle()
 
     if (existing) {
       return NextResponse.json({ error: 'Já existe outro departamento com este nome' }, { status: 409 })
     }
 
-    const departamento = await prisma.departamento.update({
-      where: { id },
-      data: {
+    const { data: departamento, error } = await supabase
+      .from('Departamento')
+      .update({
         nome: nome.trim().toUpperCase(),
         meta,
-      },
-    })
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json(departamento)
   } catch (error) {
@@ -135,10 +154,16 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
 
-    const departamento = await prisma.departamento.update({
-      where: { id },
-      data: body,
-    })
+    const { data: departamento, error } = await supabase
+      .from('Departamento')
+      .update(body)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json(departamento)
   } catch (error) {
@@ -161,7 +186,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
 
-    await prisma.departamento.delete({ where: { id } })
+    const { error } = await supabase
+      .from('Departamento')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/app/lib/prisma'
+import { supabase } from '@/app/lib/supabase'
 import { getSession } from '@/app/lib/session'
 import { verifyToken } from '@/app/lib/auth'
 import { Role } from '@/app/lib/types'
 
 function toDateOnly(d: Date): Date {
   return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0))
+}
+
+function toDateOnlyString(d: Date): string {
+  return d.toISOString().split('T')[0]
 }
 
 export async function GET(req: Request) {
@@ -32,14 +36,15 @@ export async function GET(req: Request) {
     }
   }
 
-  const trocaDia = await prisma.trocaDia.findUnique({
-    where: { data },
-    include: {
-      Registro: {
-        orderBy: { categoria: 'asc' },
-      },
-    },
-  })
+  const { data: trocaDia, error } = await supabase
+    .from('TrocaDia')
+    .select('*, Registro:categoria, realizado, meta, trocaDiaId(*)')
+    .eq('data', toDateOnlyString(data))
+    .single()
+
+  if (error && error.code !== 'PGRST116') {
+    return NextResponse.json(null)
+  }
 
   if (!trocaDia) {
     return NextResponse.json(null)
@@ -82,7 +87,6 @@ export async function PUT(req: Request) {
 
     const payload = body as Record<string, unknown>
 
-    // Validação de date
     if (typeof payload.date !== 'string' || !payload.date) {
       return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
     }
@@ -91,7 +95,6 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Data inválida' }, { status: 400 })
     }
 
-    // Validação de registros
     if (!Array.isArray(payload.registros)) {
       return NextResponse.json({ error: 'Registros inválidos' }, { status: 400 })
     }
@@ -117,27 +120,54 @@ export async function PUT(req: Request) {
       }
     })
 
-    const utcDate = toDateOnly(dateObj)
+    const utcDate = toDateOnlyString(dateObj)
 
-    let trocaDia = await prisma.trocaDia.findUnique({ where: { data: utcDate } })
+    const { data: existing, error: findError } = await supabase
+      .from('TrocaDia')
+      .select('*')
+      .eq('data', utcDate)
+      .single()
+
+    let trocaDia = existing
     if (!trocaDia) {
-      trocaDia = await prisma.trocaDia.create({
-        data: { data: utcDate }
-      })
+      const { data: created, error: createError } = await supabase
+        .from('TrocaDia')
+        .insert({ data: utcDate })
+        .select()
+        .single()
+
+      if (createError || !created) {
+        throw new Error('Erro ao criar TrocaDia')
+      }
+      trocaDia = created
     }
 
     for (const reg of registros) {
-      await prisma.registro.upsert({
-        where: { trocaDiaId_categoria: { trocaDiaId: trocaDia.id, categoria: reg.categoria } },
-        update: { realizado: reg.realizado, meta: reg.meta },
-        create: { trocaDiaId: trocaDia.id, categoria: reg.categoria, realizado: reg.realizado, meta: reg.meta },
-      })
+      const { error: upsertError } = await supabase
+        .from('Registro')
+        .upsert({
+          trocaDiaId: trocaDia.id,
+          categoria: reg.categoria,
+          realizado: reg.realizado,
+          meta: reg.meta,
+        }, {
+          onConflict: 'trocaDiaId,categoria'
+        })
+
+      if (upsertError) {
+        throw upsertError
+      }
     }
 
-    const updated = await prisma.trocaDia.findUnique({
-      where: { id: trocaDia.id },
-      include: { Registro: { orderBy: { categoria: 'asc' } } },
-    })
+    const { data: updated, error: fetchError } = await supabase
+      .from('TrocaDia')
+      .select('*')
+      .eq('id', trocaDia.id)
+      .single()
+
+    if (fetchError || !updated) {
+      throw new Error('Erro ao buscar atualizado')
+    }
 
     return NextResponse.json(updated)
   } catch (err) {

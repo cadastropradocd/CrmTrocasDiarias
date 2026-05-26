@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/app/lib/prisma'
+import { supabase } from '@/app/lib/supabase'
 import { comparePassword, signToken } from '@/app/lib/auth'
 
 export async function POST(req: Request) {
@@ -21,9 +21,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({ where: { username } })
+    const { data: user, error } = await supabase
+      .from('User')
+      .select('*')
+      .eq('username', username)
+      .single()
 
-    if (!user) {
+    if (error || !user) {
       return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
     }
 
