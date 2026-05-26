@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: '/admin', icon: '🏠' },
   { label: 'Departamentos', href: '/admin/departamentos', icon: '📦' },
   { label: 'Trocas Diárias', href: '/admin/trocas', icon: '📊' },
+  { label: 'Histórico', href: '/admin/historico', icon: '📋' },
   { label: 'Sair', href: '/login', icon: '🚪' },
 ]
 
