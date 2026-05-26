@@ -1,5 +1,34 @@
+export const dynamic = 'force-dynamic'
+
 import { redirect } from 'next/navigation'
 import { getSession } from '@/app/lib/session'
+
+function AdminCard({ href, emoji, title, description }: {
+  href: string
+  emoji: string
+  title: string
+  description: string
+}) {
+  return (
+    <a href={href} style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: '12px',
+      padding: '1.5rem',
+      textDecoration: 'none',
+      color: 'inherit',
+      transition: 'transform 0.15s, border-color 0.15s',
+    }}>
+      <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>{emoji}</div>
+      <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+        {title}
+      </h2>
+      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        {description}
+      </p>
+    </a>
+  )
+}
 
 export default async function AdminHome() {
   let session = null
@@ -7,7 +36,6 @@ export default async function AdminHome() {
     session = await getSession()
   } catch (error) {
     console.error('[admin] Error getting session:', error)
-    // Em caso de erro, redirecionar para login
     redirect('/login')
   }
 
@@ -28,57 +56,18 @@ export default async function AdminHome() {
         gap: '1rem',
         marginTop: '2rem'
       }}>
-        <a href="/admin/departamentos" style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s, border-color 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)'
-          e.currentTarget.style.borderColor = 'var(--accent)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.borderColor = 'var(--border)'
-        }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📦</div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-            Departamentos
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Gerenciar categorias e metas
-          </p>
-        </a>
-
-        <a href="/admin/trocas" style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          textDecoration: 'none',
-          color: 'inherit',
-          transition: 'transform 0.15s, border-color 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)'
-          e.currentTarget.style.borderColor = 'var(--accent)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)'
-          e.currentTarget.style.borderColor = 'var(--border)'
-        }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-            Trocas Diárias
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Ver histórico completo
-          </p>
-        </a>
+        <AdminCard
+          href="/admin/departamentos"
+          emoji="📦"
+          title="Departamentos"
+          description="Gerenciar categorias e metas"
+        />
+        <AdminCard
+          href="/admin/trocas"
+          emoji="📊"
+          title="Trocas Diárias"
+          description="Ver histórico completo"
+        />
       </div>
     </div>
   )
