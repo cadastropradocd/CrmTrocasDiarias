@@ -1,227 +1,129 @@
-# SPEC.md - Relatório de Trocas Diário (v4.0)
+# SPEC.md - Relatório de Trocas Diário (v5.0)
 
-## 1. Visão Geral do Projeto
+## 1. Visão Geral
 
-**Nome:** TrocasDiarias CRM
-**Objetivo:** Sistema web para registro diário de trocas/comercial, com painel admin para gerenciamento de departamentos e controle de acesso baseado em roles.
+### 1.1 O que é
 
-**Público-alvo:**
-- **Administrador (`cadastro`):** Lança e corrige dados diários, gerencia departamentos.
-- **Equipe Comercial (`comercial`):** Apenas visualiza o histórico e métricas.
+**TrocasDiarias CRM** é um sistema web para registro diário de vendas/trocas comerciais de um supermercado, com painel administrativo para gerenciamento e área restrita para a equipe comercial.visualizar métricas e histórico.
 
-**Diferencial:** Histórico permanente de dados por dia (snapshots), permitindo análise temporal sem perda de informações.
+### 1.2 Propósito
+
+Permitir que a equipe de **cadastro** lance valores diários de trocas/comercial por departamento (setor), e que a equipe **comercial** acompanhe o desempenho comparado às metas estabelecidas — tudo com histórico permanente que permite análise temporal.
+
+### 1.3 Diferencial
+
+**Histórico permanente com snapshots diários.** Cada dia de operação é preservado como um registro único. Os dados nunca são sobrescritos — ao editar um dia existente, o sistema subtstitui os registros daquele dia específico, mantendo o histórico intacto.
+
+### 1.4 Público-alvo
+
+| Papel | Username | Acesso |
+|-------|----------|--------|
+| **ADMIN (cadastro)** | `cadastro` | Lança e corrige dados diários, gerencia departamentos e usuários |
+| **USER (comercial)** | `comercial` | Apenas visualiza histórico, métricas e detalhes |
 
 ---
 
 ## 2. Stack Tecnológica
 
-| Tecnologia | Versão | Uso |
-|------------|--------|-----|
-| Next.js | 16.2.6 | Framework (App Router) |
-| React | 19.2.4 | Biblioteca UI |
-| TypeScript | 5 | Tipagem |
-| @supabase/supabase-js | 2.x | Cliente Supabase (banco de dados) |
-| bcryptjs | 3.0.3 | Hash de senhas |
-| jsonwebtoken | 9.0.3 | Autenticação JWT |
-| Chart.js | 4.5.1 | Gráficos |
+| Tecnologia | Uso |
+|------------|-----|
+| Next.js 16.2.6 | Framework (App Router) |
+| React 19.2.4 | Biblioteca UI |
+| TypeScript 5 | Tipagem |
+| @supabase/supabase-js 2.x | Cliente Supabase (PostgreSQL) |
+| bcryptjs 3.0.3 | Hash de senhas |
+| jsonwebtoken 9.0.3 | Autenticação JWT |
+| Chart.js 4.5.1 | Gráficos de barras |
 
-**Estilização:** CSS com CSS Variables (Dark Theme) — sem Tailwind, sem frameworks CSS.
-
----
-
-## 3. Estrutura de Arquivos
-
-```
-TrocasDiarias/
-├── app/
-│   ├── admin/
-│   │   ├── departamentos/page.tsx    # CRUD de departamentos
-│   │   ├── historico/
-│   │   │   ├── page.tsx             # Lista histórico (admin)
-│   │   │   └── [data]/page.tsx      # Detalhes histórico (admin)
-│   │   ├── trocas/page.tsx          # Dashboard de trocas editável
-│   │   ├── layout.tsx               # Layout com AdminSidebar
-│   │   ├── layout.module.css
-│   │   └── page.tsx                 # Home painel admin
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── login/route.ts       # POST: Autenticação
-│   │   │   ├── logout/route.ts      # POST: Logout
-│   │   │   └── register/route.ts    # POST: Criar usuário (ADMIN)
-│   │   ├── trocas/route.ts          # GET/PUT: Registros por data
-│   │   ├── trocas/historico/route.ts     # GET: Lista datas
-│   │   ├── trocas/historico/[data]/route.ts # GET: Detalhes por data
-│   │   ├── departamentos/route.ts   # CRUD departamentos
-│   │   └── users/route.ts           # CRUD usuários (ADMIN)
-│   ├── comercial/
-│   │   ├── historico/
-│   │   │   ├── page.tsx             # Lista histórico (comercial)
-│   │   │   └── [data]/page.tsx      # Detalhes histórico (comercial)
-│   │   ├── layout.tsx               # Layout com ComercialSidebar
-│   │   ├── layout.module.css
-│   │   └── page.tsx                 # Redirect para /comercial/historico
-│   ├── components/
-│   │   ├── Dashboard.tsx            # Componente principal (props: editable, readonlyBanner)
-│   │   ├── DateSelector.tsx         # Seletor de data
-│   │   ├── AdminSidebar.tsx         # Sidebar admin (hover-to-expand)
-│   │   ├── ComercialSidebar.tsx     # Sidebar comercial
-│   │   ├── HistoricoList.tsx        # Lista de histórico
-│   │   ├── HistoricoDetalhes.tsx    # Detalhes de uma data
-│   │   ├── TrocasDiarias.tsx        # Widget de trocas (usado em admin/trocas)
-│   │   └── Toast.tsx                # Notificações
-│   ├── lib/
-│   │   ├── auth.ts                  # JWT & Bcrypt
-│   │   ├── session.ts               # getSession() (server-side)
-│   │   ├── supabase.ts              # Cliente Supabase
-│   │   ├── db/                      # Helpers de banco (usados pela API)
-│   │   │   ├── index.ts             # Export agregado
-│   │   │   ├── usuarios.ts          # getUserByUsername, createUser, etc
-│   │   │   ├── departamentos.ts      # CRUD departamentos
-│   │   │   ├── trocas.ts           # getTrocaDiaByDate, getOrCreateTrocaDia
-│   │   │   └── registros.ts         # getRegistrosByTrocaDiaId, upsertRegistros
-│   │   ├── database.types.ts        # Tipos gerados do Supabase
-│   │   └── types.ts                 # Role, helpers
-│   ├── login/page.tsx               # Página de login
-│   ├── globals.css                  # CSS global (dark theme)
-│   ├── layout.tsx                   # RootLayout
-│   └── page.tsx                     # Dashboard readonly (/)
-├── middleware.ts                     # Auth middleware (renomeado de proxy.ts)
-├── scripts/
-│   └── migrate_via_api.js           # Script de migração
-├── supabase-init.sql                # Schema inicial
-├── package.json
-├── tsconfig.json
-├── next.config.ts
-└── spec.md                          # Este documento
-```
+**Estilização:** CSS com CSS Variables (Dark Theme). Sem Tailwind, sem frameworks CSS.
 
 ---
 
-## 4. Modelo de Dados (Supabase/PostgreSQL)
+## 3. Modelo de Dados (Supabase/PostgreSQL)
 
-### 4.1 Tabela `usuarios`
-
-| Coluna | Tipo | Descrição |
-|--------|------|---------|
-| id | serial | PK |
-| username | varchar(50) | Unique |
-| password | varchar(255) | Hash bcrypt |
-| name | varchar(100) | Nome completo |
-| role | role | ADMIN ou USER |
-| created_at | timestamp | Default now() |
-
-### 4.2 Enum Role
+### 3.1 Enum Role
 
 ```sql
 CREATE TYPE role AS ENUM ('ADMIN', 'USER');
 ```
 
-### 4.3 Tabela `trocas_dias`
-
-Cada dia de registro é um `trocas_dias` único. Permite histórico permanente.
+### 3.2 Tabela `User`
 
 | Coluna | Tipo | Descrição |
-|--------|------|---------|
+|--------|------|-----------|
+| id | serial | PK |
+| username | varchar(50) | Unique, login do usuário |
+| password | varchar(255) | Hash bcrypt |
+| name | varchar(100) | Nome completo |
+| role | role | ADMIN ou USER |
+| createdAt | timestamp | Default now() |
+
+### 3.3 Tabela `Departamento`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | serial | PK |
+| nome | varchar(100) | Unique, uppercase (ex: "AÇOUGUE", "HORTIFRUTI") |
+| meta | float | Meta diária padrão para o departamento |
+| ativo | boolean | Departamentos inativos não aparecem na tabela |
+| createdAt | timestamp | Default now() |
+| updatedAt | timestamp | Auto-update |
+
+### 3.4 Tabela `TrocaDia`
+
+Cada dia de registro é um `TrocaDia` único. Permite histórico permanente.
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
 | id | serial | PK |
 | data | date | Unique (YYYY-MM-DD) |
-| created_at | timestamp | Default now() |
+| createdAt | timestamp | Default now() |
 
-### 4.4 Tabela `registros`
+### 3.5 Tabela `Registro`
 
-Registros pertencem a um `trocas_dias`. Um departamento pode ter apenas um registro por dia.
+Registros pertencem a um `TrocaDia`. Cada departamento pode ter apenas um registro por dia.
 
 | Coluna | Tipo | Descrição |
-|--------|------|---------|
+|--------|------|-----------|
 | id | serial | PK |
-| troca_dia_id | int | FK → trocas_dias.id |
-| categoria | varchar(100) | Nome do departamento |
+| trocaDiaId | int | FK → TrocaDia.id (onDelete Cascade) |
+| departamentoId | int | FK → Departamento.id (nullable) |
+| categoria | varchar(100) | Nome do departamento (uppercase) |
 | realizado | float | Valor realizado no dia |
 | meta | float | Meta do dia |
 
-**Unique constraint:** `(troca_dia_id, categoria)`
-
-### 4.5 Tabela `departamentos`
-
-Departamentos/categorias gerenciados pelo admin. Cada departamento tem uma meta padrão.
-
-| Coluna | Tipo | Descrição |
-|--------|------|---------|
-| id | serial | PK |
-| nome | varchar(100) | Unique, uppercase |
-| meta | float | Meta diária padrão |
-| ativo | boolean | Pode ser desativado |
-| created_at | timestamp | Default now() |
-| updated_at | timestamp | Auto-update |
+**Unique constraint:** `(trocaDiaId, categoria)`
 
 ---
 
-## 5. Usuários do Sistema
+## 4. Autenticação e Autorização
 
-| Username | Senha | Role | Descrição |
-|----------|-------|------|-----------|
-| `cadastro` | `160922` | ADMIN | Admin do sistema |
-| `comercial` | `123456` | USER | Equipe comercial |
-
----
-
-## 6. Endpoints da API
-
-### 6.1 Autenticação
-
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| POST | `/api/auth/login` | Login com username/password | Público |
-| POST | `/api/auth/logout` | Logout (limpa cookie) | Logado |
-| POST | `/api/auth/register` | Criar usuário | ADMIN |
-
-### 6.2 Trocas
-
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| GET | `/api/trocas?date=YYYY-MM-DD` | Retorna registros de um dia | Logado |
-| PUT | `/api/trocas` | Salva/Atualiza registros de um dia | ADMIN |
-| GET | `/api/trocas/historico` | Lista todas as datas | Logado |
-| GET | `/api/trocas/historico/[data]` | Detalhes de uma data | Logado |
-
-### 6.3 Departamentos
-
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| GET | `/api/departamentos` | Lista todos departamentos | Logado |
-| POST | `/api/departamentos` | Cria novo departamento | ADMIN |
-| PUT | `/api/departamentos?id=X` | Atualiza departamento | ADMIN |
-| PATCH | `/api/departamentos?id=X` | Toggle ativo | ADMIN |
-| DELETE | `/api/departamentos?id=X` | Remove departamento | ADMIN |
-
-### 6.4 Usuários
-
-| Método | Rota | Descrição | Auth |
-|--------|------|-----------|------|
-| GET | `/api/users` | Lista todos usuários | ADMIN |
-| POST | `/api/users` | Cria usuário | ADMIN |
-| DELETE | `/api/users?id=X` | Remove usuário | ADMIN |
-
----
-
-## 7. Autenticação e Autorização
-
-### 7.1 Fluxo de Login
+### 4.1 Fluxo de Login
 
 1. Usuário envia `POST /api/auth/login` com `{ username, password }`
-2. Backend valida credenciais via bcrypt
-3. Gera JWT com payload `{ username, name, role }`
-4. Define cookie `session` (HttpOnly, secure em prod)
-5. Retorna `{ token, name, role }` para o cliente
+2. Backend busca usuário por username no banco
+3. Valida senha com bcrypt.compare
+4. Gera JWT com payload `{ username, name, role }`, expira em 24h
+5. Define cookie `session` (HttpOnly, Secure em produção, SameSite=Lax)
+6. Client salva token no sessionStorage para uso no Authorization header
+7. Retorna `{ token, name, role }`
 
-### 7.2 Proteção de Rotas
+### 4.2 Sessão Server-Side
 
-**Middleware (`middleware.ts`):**
-- `/login` → Se logado, redirect para `/admin` ou `/comercial`
-- `/admin/*` → Apenas ADMIN
-- `/comercial/*` → Qualquer usuário logado
-- `/` → Qualquer usuário logado
+- **Fonte da verdade:** cookie HttpOnly `session`
+- `getSession()` em `lib/session.ts` lê exclusivamente o cookie
+- Não depende de sessionStorage ou Authorization header para validação server-side
 
-### 7.3 Fluxo de Redirect Pós-Login
+### 4.3 Proteção de Rotas (proxy.ts)
+
+| Rota | Acesso |
+|------|--------|
+| `/login` | Público. Se já logado → redirect para `/admin` (ADMIN) ou `/comercial` (USER) |
+| `/` | **Qualquer usuário logado** (Dashboard readonly) |
+| `/admin/*` | **Apenas ADMIN** |
+| `/comercial/*` | **Qualquer usuário logado** (USER ou ADMIN) |
+
+### 4.4 Fluxo de Redirect Pós-Login
 
 | Role | Redirect |
 |------|----------|
@@ -230,179 +132,325 @@ Departamentos/categorias gerenciados pelo admin. Cada departamento tem uma meta 
 
 ---
 
-## 8. Páginas do Sistema
+## 5. Estrutura de Rotas
 
-### 8.1 Login (`/login`)
+```
+/                          → Dashboard readonly (qualquer logado)
+/login                     → Login (público)
 
-- Formulário com username e password
-- Erros mostrados via Toast
-- Redireciona para `/admin` ou `/comercial` após login
+/admin                     → Home painel admin (ADMIN)
+/admin/trocas              → Lançamento do dia atual editável (ADMIN)
+/admin/departamentos      → CRUD de departamentos (ADMIN)
+/admin/historico           → Lista de datas com totais (ADMIN)
+/admin/historico/[data]    → Detalhes de uma data (ADMIN)
 
-### 8.2 Dashboard Público (`/`)
+/comercial                 → Redirect para /comercial/historico
+/comercial/historico       → Lista de datas com totais (USER)
+/comercial/historico/[data] → Detalhes de uma data (USER)
+```
 
-- Componente `<Dashboard editable={false} readonlyBanner={true} />`
-- Visualização de dados (somente leitura)
-- DateSelector para navegar entre datas
-- Gráfico Chart.js
+---
 
-### 8.3 Painel Admin (`/admin`)
+## 6. Funcionalidades por Página + Componentes
 
-- Home do painel admin com cards
-- Protegido: apenas ADMIN acessa
-- AdminSidebar com navegação
+### 6.1 Login (`/login`)
 
-### 8.4 Trocas Admin (`/admin/trocas`)
+- Formulário: username + password
+- Autocomplete nativo
+- Erros mostrados via Toast (`/api/auth/login` retorna erro)
+- Redirect pós-login conforme role (linha 36-40 de `login/page.tsx`)
+
+### 6.2 Home (`/`) — Dashboard Readonly
+
+- `<Dashboard editable={false} readonlyBanner={true} />`
+- DateSelector para navegar entre datas do histórico
+- Gráfico Chart.js de barras: Realizado vs Meta por setor
+- Tabela com ordenação por coluna (setor, realizado, meta, diferença, status)
+- Badges "MELHOR" (melhor desempenho % positivo) e "CRÍTICO" (pior)
+- KPIs: Total Realizado, Meta Total, Diferença Total (com status %)
+- **Não tem botão Salvar** (readonly)
+
+### 6.3 Admin — Home (`/admin`)
+
+- Layout com `AdminSidebar`
+- Cards de navegação para seções
+- Sidebar expande no hover (60px → 220px)
+
+### 6.4 Admin — Trocas Diárias (`/admin/trocas`)
 
 - Componente `<TrocasDiarias />`
-- Dashboard editável
-- Admin pode navegar e editar qualquer data
+- **Diferente do Dashboard:** Não tem DateSelector, não tem gráfico
+- Apenas tabela editável do dia ATUAL
+- Inputs para valor Realizado e Meta de cada departamento
+- Botão Salvar
+- Mostra banner "Modo somente leitura" se readonly=true mas isso não deveria acontecer aqui
 
-### 8.5 Departamentos Admin (`/admin/departamentos`)
+### 6.5 Admin — Departamentos (`/admin/departamentos`)
 
-- CRUD completo de departamentos
-- Tabela com colunas: Nome, Meta, Status, Ações
+- CRUD completo
+- Modal para criar/editar: campos Nome (text) e Meta (number)
+- Tabela: Nome, Meta, Status (Ativo/Inativo), Ações
+- Toggle ativo/inativo via PATCH
+- Confirmação antes de excluir (DELETE)
 
-### 8.6 Histórico Admin (`/admin/historico`)
+### 6.6 Admin — Histórico (`/admin/historico`)
 
-- Lista todas as datas disponíveis
-- Redirect para detalhes ao clicar
+- `<HistoricoList isComercial={false} />`
+- Lista todas as datas disponíveis ordenadas por data (desc)
+- mostraKPIs: Total Realizado, Meta, Diferença
+- Botão "Lançar Hoje" → `/admin/trocas`
+- Botão "Ver detalhes" → `/admin/historico/[data]`
 
-### 8.7 Área Comercial (`/comercial`)
+### 6.7 Admin — Detalhes Histórico (`/admin/historico/[data]`)
 
-- `/comercial` → redirect para `/comercial/historico`
-- `/comercial/historico` → `<HistoricoList isComercial={true} />`
-- `/comercial/historico/[data]` → `<HistoricoDetalhes isComercial={true} />`
-- ComercialSidebar
+- `<HistoricoDetalhes isComercial={false} basePath="/admin/historico" />`
+- Mostra data, KPIs, tabela de registros do dia
+- Botão voltar
 
----
+### 6.8 Comercial — Home (`/comercial`)
 
-## 9-sidebars
+- `useEffect` com `router.replace('/comercial/historico')`
+- Usuário SEMPRE vai para `/comercial/historico`
 
-### 9.1 AdminSidebar
+### 6.9 Comercial — Histórico (`/commercial/historico`)
 
-- **Oculta por padrão:** Largura de 60px
-- **Expande no hover:** Largura de 220px
-- **Posição:** Fixed na esquerda, altura 100vh
+- `<HistoricoList isComercial={true} />`
+- Mesma interface do admin/historico, mas:
+  - **Não tem** botão "Lançar Hoje"
+  - Usa `ComercialSidebar`
 
-| Label | Rota |
-|-------|------|
-| Home | `/admin` |
-| Departamentos | `/admin/departamentos` |
-| Trocas Diárias | `/admin/trocas` |
-| Sair | `/login` |
+### 6.10 Comercial — Detalhes (`/comercial/historico/[data]`)
 
-### 9.2 ComercialSidebar
-
-- Mesma estrutura visual da AdminSidebar
-- Itens específicos para área comercial
-
-| Label | Rota |
-|-------|------|
-| Histórico | `/comercial/historico` |
-| Sair | `/login` |
+- `<HistoricoDetalhes isComercial={true} basePath="/comercial/historico" />`
 
 ---
 
-## 10. Componentes Principais
+## 7. Componentes Principais
 
-### 10.1 Dashboard.tsx
+### 7.1 Dashboard.tsx
 
 Props:
-- `editable?: boolean` — Habilita edição
-- `readonlyBanner?: boolean` — Mostra banner "Modo somente leitura"
+- `editable?: boolean` — Habilita edição (default: false)
+- `readonlyBanner?: boolean` — Mostra banner "Somente leitura" (default: false)
 
 Funcionalidades:
 - DateSelector integrado
-- Tabela de registros com inputs (se editable)
-- Gráfico de barras (Chart.js)
+- Tabela com ordenação por colunas
+- Gráfico de barras Realizado vs Meta (Chart.js)
+- Badges MELHOR/CRÍTICO
 - Botão Salvar (se editable)
 - Toast para feedback
 
-### 10.2 TrocasDiarias.tsx
+### 7.2 TrocasDiarias.tsx
 
-Page wrapper para `/admin/trocas`. Renderiza `<Dashboard editable={true} />`.
+- Wrapper para `/admin/trocas` — `<Dashboard editable={true} />`
+- Não tem DateSelector nem gráfico (diferente do Dashboard completo)
 
-### 10.3 HistoricoList.tsx
+### 7.3 DateSelector.tsx
 
-Props:
-- `isComercial?: boolean` — Ajusta caminhos de navegação
+Props: `selectedDate: string`, `onDateChange: (date: string) => void`
 
-Lista datas disponíveis com totales.
+Funcionalidades:
+- Dropdown com datas do histórico
+- Opção "Hoje" no topo
+- Opção "+ Nova data..." com date input customizado
+- Carrega datas de `/api/trocas/historico`
 
-### 10.4 HistoricoDetalhes.tsx
+### 7.4 HistoricoList.tsx
 
-Props:
-- `isComercial?: boolean` — Ajusta caminhos de navegação
+Props: `isComercial?: boolean` (default: false)
 
-Mostra detalhes de uma data específica.
+- Lista datas com totales
+- Ajusta `basePath` para navegação (/admin/historico ou /comercial/historico)
+- Não mostra botão "Lançar Hoje" se `isComercial=true`
 
-### 10.5 DateSelector.tsx
+### 7.5 HistoricoDetalhes.tsx
 
-Props:
-- `selectedDate: string` — Data atual (YYYY-MM-DD)
-- `onDateChange: (date: string) => void`
+Props: `isComercial?: boolean`, `basePath?: string`
 
-Dropdown com datas do histórico.
+- Detalhes de uma data específica
+- Tabela deRegistros, KPIs
+
+### 7.6 AdminSidebar.tsx / ComercialSidebar.tsx
+
+- Fixed na esquerda, 100vh
+- Largura: 60px collapsed → 220px hover
+- ItensAdmin: Home, Departamentos, Trocas Diárias, Histórico, Sair
+- ItensComercial: Histórico, Sair
+
+### 7.7 Toast.tsx
+
+- Notificações globais (success, error, warning, info)
+- Auto-dismiss, posicionado top-right
 
 ---
 
-## 11. Regras de Negócio
+## 8. Regras de Negócio
 
-### 11.1 Data Handling
+### 8.1 Meta vs Realizado
 
--Todas as datasnormalizadas para UTC midnight
-- DateSelector usa getters locais para exibir no fuso de São Paulo
+- **Meta:** Valor-alvo diário definido por departamento. Configurada no cadastro do departamento.
+- **Realizado:** Valor efetivamente atingido naquele dia.
+- **Diferença:** `Realizado - Meta`
+  - Positivo → acima da meta (resultado bom, cor verde)
+  - Negativo → abaixo da meta (resultado ruim, cor vermelha)
+- **Status %:** `((Realizado - Meta) / Meta) * 100`
 
-### 11.2 Histórico
+### 8.2 Salvamento de Dados
 
-- Dados nunca são sobrescritos, apenas novos dias são criados
-- TrocaDia é único por data
-- Registro é único por (trocaDiaId, categoria)
+Ao salvar um dia:
+1. Se `TrocaDia` para aquela data não existe → cria
+2. Deleta TODOS os `Registro` daquele dia
+3. Recria os registros com os valores atuais (upsert via delete+insert)
+4. Isso permite editar任意 valor do dia
+
+### 8.3 Departamentos Ativos/Inativos
+
+- `ativo=true` → aparece na tabela de edição e no histórico
+- `ativo=false` → não aparece nas tabelas
+- Permite desativar sem perder histórico
+
+### 8.4 Data Handling
+
+- Armazenamento: `YYYY-MM-DD` (UTC date)
+- Exibição: `DD/MM/YYYY`
+- DateSelector usa getters locais para fuso de São Paulo
 
 ---
 
-## 12. Variáveis de Ambiente
+## 9. Regras de Formatação
 
-### 12.1 Locais (`.env` / `.env.local`)
+### 9.1 Monetary (BRL)
 
-```env
-JWT_SECRET=[string-secreta-minimo-32-chars]
-NEXT_PUBLIC_SUPABASE_URL=[url-supabase]
-NEXT_PUBLIC_SUPABASE_ANON_KEY=[chave-anonima]
+```typescript
+function formatBRL(valor: number): string {
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+// 5267.70 → "R$ 5.267,70"
 ```
 
-### 12.2 Vercel
+### 9.2 Percentual de Status
 
-Mesmas variáveis configuradas no dashboard da Vercel.
+```typescript
+function formatStatusPct(realizado: number, meta: number): string {
+  // Retorna: "10,50% ↑" | "5,25% ↓" | "0,00% →"
+}
+```
+
+### 9.3 Diferença Visual
+
+```typescript
+function formatDiferenca(valor: number): string {
+  // Retorna: "R$ 1.267,70 ↑" | "R$ 500,00 ↓" | "R$ 0,00 →"
+}
+```
+
+### 9.4 Parsing pt-BR
+
+```typescript
+function parseNumBR(texto: string): number | null {
+  // Aceita "5.267,70", "5267.70", "5267,70" → 5267.70
+}
+```
 
 ---
 
-## 13. Scripts npm
+## 10. Endpoints da API
 
-| Script | Descrição |
-|--------|----------|
-| `dev` | Inicia servidor de desenvolvimento |
-| `build` | `next build` |
-| `start` | Inicia servidor de produção |
-| `lint` | ESLint |
+### 10.1 Autenticação
+
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| POST | `/api/auth/login` | Login | Público |
+| POST | `/api/auth/logout` | Logout (limpa cookie) | Logado |
+| POST | `/api/auth/register` | Criar usuário | **403 — desabilitado** |
+
+### 10.2 Trocas
+
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| GET | `/api/trocas?date=YYYY-MM-DD` | Registros do dia | Logado |
+| PUT | `/api/trocas` | Salvar registros do dia | **ADMIN** |
+| GET | `/api/trocas/historico` | Lista de datas disponíveis | Logado |
+| GET | `/api/trocas/historico/[data]` | Detalhes de uma data | Logado |
+
+### 10.3 Departamentos
+
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| GET | `/api/departamentos` | Lista todos | **ADMIN** |
+| POST | `/api/departamentos` | Cria departamento | **ADMIN** |
+| PUT | `/api/departamentos?id=X` | Atualiza | **ADMIN** |
+| PATCH | `/api/departamentos?id=X` | Toggle ativo | **ADMIN** |
+| DELETE | `/api/departamentos?id=X` | Remove | **ADMIN** |
+
+### 10.4 Usuários
+
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| GET | `/api/users` | Lista todos | **ADMIN** |
+| POST | `/api/users` | Cria usuário | **ADMIN** |
+| DELETE | `/api/users?id=X` | Remove usuário | **ADMIN** |
 
 ---
 
-## 14. URLs do Projeto
+## 11. CSS / Tema
+
+### 11.1 Variáveis (Dark Theme)
+
+```css
+--bg-page: #0b1525;           /* Fundo da página */
+--bg-card: #151e30;           /* Fundo de cards */
+--bg-header: #0f172a;         /* Fundo do header */
+--border: #1e3a5f;            /* Bordas */
+--border-light: #2d4a6f;      /* Bordas leves */
+--text: #f1f5f9;              /* Texto principal */
+--text-muted: #94a3b8;        /* Texto secundário */
+--text-heading: #ffffff;      /* Títulos */
+--brand: #3b82f6;             /* Azul */
+--accent: #fbbf24;            /* Amarelo (accent) */
+--ok / --status-ok: #10b981;  /* Verde */
+--danger / --status-critico: #ef4444; /* Vermelho */
+```
+
+### 11.11 Classes de Status
+
+| Classe | Cor | Uso |
+|--------|-----|-----|
+| `.status-positivo` | Verde (#34d399) | Acima da meta |
+| `.status-negativo` | Vermelho (#f87171) | Abaixo da meta |
+| `.estado-bom` | Borda verde | Diferença positiva |
+| `.estado-critico` | Borda vermelha | Diferença negativa |
+| `.badge-melhor` | Verde | Melhor desempenho |
+| `.badge-critico` | Vermelho | Pior desempenho |
+
+---
+
+## 12. Usuários do Sistema (Seed)
+
+| Username | Senha | Role | Nome |
+|----------|-------|------|------|
+| `cadastro` | `160922` | ADMIN | Cadastro |
+| `comercial` | `123456` | USER | Equipe Comercial |
+
+---
+
+## 13. URLs
 
 | Ambiente | URL |
 |----------|-----|
 | Local | `http://localhost:3000` |
-| Produção | `https://trocas-diarias.vercel.app` |
+| Produção Vercel | `https://trocas-diarias.vercel.app` |
 
 ---
 
-## 15. Bugs / Correções Recentes
+## 14. Bugs / Correções Recentes
 
 | Data | Descrição |
-|------|----------|
-| 26/05/2026 | Login redirecionava ADMIN para `/` (home) em vez de `/admin` |
-| 26/05/2026 | Área comercial não tinha redirect para `/comercial/historico` |
+|------|-----------|
+| 26/05/2026 | Login: usuário ADMIN era redirecionado para `/` (home) em vez de `/admin` |
+| 26/05/2026 | `/comercial` não redirecionava automaticamente para `/comercial/historico` |
+| 26/05/2026 | Logout: agora limpa corretamente o cookie HttpOnly |
 
 ---
 
