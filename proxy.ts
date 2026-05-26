@@ -14,7 +14,7 @@ export default async function proxy(req: NextRequest) {
 
   if (path === '/login') {
     if (session) {
-      return NextResponse.redirect(new URL(session.role === 'ADMIN' ? '/admin' : '/', req.nextUrl))
+      return NextResponse.redirect(new URL(session.role === 'ADMIN' ? '/admin' : '/comercial', req.nextUrl))
     }
     return NextResponse.next()
   }
