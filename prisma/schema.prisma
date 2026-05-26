@@ -6,11 +6,27 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  ADMIN
-  USER
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Registro {
+  id         Int      @id @default(autoincrement())
+  categoria  String
+  realizado  Float
+  meta       Float
+  trocaDiaId Int
+  TrocaDia   TrocaDia @relation(fields: [trocaDiaId], references: [id], onDelete: Cascade)
+
+  @@unique([trocaDiaId, categoria])
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model TrocaDia {
+  id        Int        @id @default(autoincrement())
+  data      DateTime   @unique
+  createdAt DateTime   @default(now())
+  Registro  Registro[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model User {
   id        Int      @id @default(autoincrement())
   username  String   @unique
@@ -20,29 +36,7 @@ model User {
   createdAt DateTime @default(now())
 }
 
-model TrocaDia {
-  id        Int       @id @default(autoincrement())
-  data      DateTime  @unique
-  createdAt DateTime  @default(now())
-  registros Registro[]
-}
-
-model Registro {
-  id          Int      @id @default(autoincrement())
-  categoria   String
-  realizado   Float
-  meta        Float
-  trocaDiaId  Int
-  trocaDia    TrocaDia @relation(fields: [trocaDiaId], references: [id], onDelete: Cascade)
-
-  @@unique([trocaDiaId, categoria])
-}
-
-model Departamento {
-  id        Int      @id @default(autoincrement())
-  nome      String   @unique
-  meta      Float
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum Role {
+  ADMIN
+  USER
 }
