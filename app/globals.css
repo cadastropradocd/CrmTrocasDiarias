@@ -506,7 +506,7 @@ thead th:nth-child(5) {
 
 @media (max-width: 1300px) {
   body { overflow-x: hidden; }
-  .dashboard { width: 96vw; padding: 0.5rem 0 1rem; }
+  .dashboard { width: 100%; padding: 0.5rem 0 1rem; }
   .header { flex-direction: row; align-items: center; gap: 0.5rem; }
   .kpis { gap: 0.75rem; }
 }
@@ -514,12 +514,27 @@ thead th:nth-child(5) {
 @media (max-width: 900px) {
   .kpis { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
   .action-btn { padding: 0.4rem 0.7rem; font-size: 0.75rem; }
+  .header-left { gap: 0.5rem; flex-wrap: wrap; }
+  .header-right { gap: 0.3rem; }
 }
 
 @media (max-width: 600px) {
   .kpis { grid-template-columns: 1fr 1fr; gap: 0.4rem; }
-  .header { padding: 0.4rem 0.8rem; }
-  .header h1 { font-size: 0.85rem; }
-  table { font-size: 0.7rem; }
-  .date-badge { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+  .header { padding: 0.4rem 0.5rem; }
+  .header h1 { font-size: 0.75rem; }
+  .header h1::before { width: 4px; }
+  table { font-size: 0.65rem; }
+  .date-badge { font-size: 0.65rem; padding: 0.25rem 0.4rem; }
+  .kpi-value { font-size: 1rem; }
+  .kpi-label { font-size: 0.6rem; }
+  td { padding: 0.35rem 0.25rem; }
+  .card { padding: 0.75rem; }
+  .card h2 { font-size: 0.7rem; }
+  .table-wrap { margin: 0 -0.5rem; }
+}
+
+@media (max-width: 400px) {
+  .kpis { grid-template-columns: 1fr; }
+  .header h1 { font-size: 0.65rem; }
+  .action-btn { padding: 0.3rem 0.5rem; font-size: 0.65rem; }
 }
