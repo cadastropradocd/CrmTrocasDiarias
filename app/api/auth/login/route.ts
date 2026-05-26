@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/app/lib/supabase'
+import { getUserByUsername } from '@/app/lib/db'
 import { comparePassword, signToken } from '@/app/lib/auth'
 
 export async function POST(req: Request) {
@@ -21,13 +21,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 })
     }
 
-    const { data: user, error } = await supabase
-      .from('User')
-      .select('*')
-      .eq('username', username)
-      .single()
-
-    if (error || !user) {
+    const user = await getUserByUsername(username)
+    if (!user) {
       return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
     }
 

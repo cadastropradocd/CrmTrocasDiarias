@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/app/lib/supabase'
 import { getSession } from '@/app/lib/session'
+import {
+  getAllDepartamentos,
+  createDepartamento,
+  updateDepartamento,
+  deleteDepartamento,
+  existsDepartamentoComNome,
+  toggleDepartamentoAtivo,
+} from '@/app/lib/db'
 
 async function requireAdmin() {
   const session = await getSession()
@@ -17,15 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: departamentos, error } = await supabase
-      .from('Departamento')
-      .select('*')
-      .order('nome', { ascending: true })
-
-    if (error) {
-      throw error
-    }
-
+    const departamentos = await getAllDepartamentos()
     return NextResponse.json(departamentos)
   } catch (error) {
     console.error('GET /api/departamentos error:', error)
@@ -51,28 +50,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Meta inválida' }, { status: 400 })
     }
 
-    const { data: existing } = await supabase
-      .from('Departamento')
-      .select('*')
-      .eq('nome', nome.trim().toUpperCase())
-      .single()
-
-    if (existing) {
+    const exists = await existsDepartamentoComNome(nome.trim().toUpperCase())
+    if (exists) {
       return NextResponse.json({ error: 'Já existe um departamento com este nome' }, { status: 409 })
     }
 
-    const { data: departamento, error } = await supabase
-      .from('Departamento')
-      .insert({
-        nome: nome.trim().toUpperCase(),
-        meta,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      throw error
-    }
+    const departamento = await createDepartamento({
+      nome: nome.trim(),
+      meta,
+    })
 
     return NextResponse.json(departamento, { status: 201 })
   } catch (error) {
@@ -106,30 +92,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Meta inválida' }, { status: 400 })
     }
 
-    const { data: existing } = await supabase
-      .from('Departamento')
-      .select('*')
-      .eq('nome', nome.trim().toUpperCase())
-      .neq('id', id)
-      .maybeSingle()
-
-    if (existing) {
+    const exists = await existsDepartamentoComNome(nome.trim().toUpperCase(), id)
+    if (exists) {
       return NextResponse.json({ error: 'Já existe outro departamento com este nome' }, { status: 409 })
     }
 
-    const { data: departamento, error } = await supabase
-      .from('Departamento')
-      .update({
-        nome: nome.trim().toUpperCase(),
-        meta,
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      throw error
-    }
+    const departamento = await updateDepartamento(id, {
+      nome: nome.trim().toUpperCase(),
+      meta,
+    })
 
     return NextResponse.json(departamento)
   } catch (error) {
@@ -154,17 +125,12 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
 
-    const { data: departamento, error } = await supabase
-      .from('Departamento')
-      .update(body)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      throw error
+    if ('ativo' in body) {
+      const departamento = await toggleDepartamentoAtivo(id)
+      return NextResponse.json(departamento)
     }
 
+    const departamento = await updateDepartamento(id, body)
     return NextResponse.json(departamento)
   } catch (error) {
     console.error('PATCH /api/departamentos error:', error)
@@ -186,15 +152,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('Departamento')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      throw error
-    }
-
+    await deleteDepartamento(id)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/departamentos error:', error)

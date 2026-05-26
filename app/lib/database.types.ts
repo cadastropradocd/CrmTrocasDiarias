@@ -8,16 +8,19 @@ export interface Database {
           id: number
           nome: string
           meta: number
+          ativo: boolean
         }
         Insert: {
           id?: number
           nome: string
           meta: number
+          ativo?: boolean
         }
         Update: {
           id?: number
           nome?: string
           meta?: number
+          ativo?: boolean
         }
       }
       Registro: {
@@ -27,6 +30,7 @@ export interface Database {
           realizado: number
           meta: number
           trocaDiaId: number
+          departamentoId: number | null
         }
         Insert: {
           id?: number
@@ -34,6 +38,7 @@ export interface Database {
           realizado: number
           meta: number
           trocaDiaId: number
+          departamentoId?: number | null
         }
         Update: {
           id?: number
@@ -41,6 +46,7 @@ export interface Database {
           realizado?: number
           meta?: number
           trocaDiaId?: number
+          departamentoId?: number | null
         }
       }
       TrocaDia: {
@@ -90,14 +96,11 @@ export interface Database {
   }
 }
 
-export type Tables<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Row']
+export type Tables<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Row']
 
-export type Inserts<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Insert']
+export type Inserts<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Insert']
 
-export type Updates<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Update']
+export type Updates<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Update']

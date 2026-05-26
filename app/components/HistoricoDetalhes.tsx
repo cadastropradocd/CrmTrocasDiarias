@@ -65,7 +65,7 @@ export default function HistoricoDetalhes({ data }: Props) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch(`/api/historico/detalhes?data=${data}`)
+        const res = await fetch(`/api/trocas/historico/${data}`)
         if (!res.ok) {
           if (res.status === 404) {
             showToast('Nenhum registro para esta data', 'error')
@@ -89,7 +89,7 @@ export default function HistoricoDetalhes({ data }: Props) {
 
   async function logout() {
     try {
-      await fetch('/api/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST' })
     } catch { /* ignore */ }
     window.location.href = '/login'
   }

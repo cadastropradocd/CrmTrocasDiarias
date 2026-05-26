@@ -76,7 +76,7 @@ export default function TrocasDiarias() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/dados')
+        const res = await fetch('/api/trocas')
         if (!res.ok) {
           showToast('Erro ao carregar dados', 'error')
           setLoading(false)
@@ -104,7 +104,7 @@ export default function TrocasDiarias() {
   async function handleSave() {
     setSaving(true)
     try {
-      const res = await fetch('/api/dados', {
+      const res = await fetch('/api/trocas', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,7 +132,7 @@ export default function TrocasDiarias() {
 
   async function logout() {
     try {
-      await fetch('/api/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST' })
     } catch { /* ignore */ }
     window.location.href = '/login'
   }

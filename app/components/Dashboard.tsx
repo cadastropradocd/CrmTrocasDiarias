@@ -118,7 +118,7 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
 
   const fetchData = useCallback(async (date: string) => {
     try {
-      const res = await fetch(`/api/dados?date=${date}`)
+      const res = await fetch(`/api/trocas?date=${date}`)
       if (!res.ok) {
         showToast('Erro ao carregar dados', 'error')
         setLoading(false)
@@ -290,7 +290,7 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
     if (!editable) return
     setSaving(true)
     try {
-      const res = await fetch('/api/dados', {
+      const res = await fetch('/api/trocas', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: selectedDate, registros }),
@@ -312,7 +312,7 @@ export default function Dashboard({ editable = false, readonlyBanner = false }: 
 
   async function logout() {
     try {
-      await fetch('/api/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST' })
     } catch { /* ignore */ }
     sessionStorage.clear()
     router.push('/login')

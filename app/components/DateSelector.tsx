@@ -54,7 +54,7 @@ export default function DateSelector({ selectedDate, onDateChange }: DateSelecto
     async function fetchDates() {
       try {
         // Usa cookie automaticamente via getSession() no server
-        const res = await fetch('/api/historico')
+        const res = await fetch('/api/trocas/historico')
         if (!res.ok) return
         const data = await res.json()
         setDates(data)

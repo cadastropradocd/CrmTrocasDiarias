@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/app/lib/supabase'
 import { getSession } from '@/app/lib/session'
 import { verifyToken } from '@/app/lib/auth'
 import { Role } from '@/app/lib/types'
+import { getDepartamentosAtivos } from '@/app/lib/db'
+import { getTrocaDiaByDate, getOrCreateTrocaDia } from '@/app/lib/db'
+import { getRegistrosByTrocaDiaId, upsertRegistros } from '@/app/lib/db'
 
 function todayString(): string {
   const d = new Date()
@@ -20,33 +22,15 @@ export async function GET() {
 
   const today = todayString()
 
-  const { data: departamentos, error: deptError } = await supabase
-    .from('Departamento')
-    .select('id, nome, meta')
-    .order('nome', { ascending: true })
+  const departamentos = await getDepartamentosAtivos()
 
-  if (deptError) {
-    console.error('[dados] Error fetching departamentos:', deptError)
-    return NextResponse.json({ error: 'Erro ao buscar departamentos' }, { status: 500 })
-  }
+  const trocaDia = await getTrocaDiaByDate(today)
 
-  const { data: trocaDia } = await supabase
-    .from('TrocaDia')
-    .select('id, data')
-    .eq('data', today)
-    .single()
-
-  let registros: Record<string, { realizado: number; meta: number }> = {}
+  const registros: Record<string, { realizado: number; meta: number }> = {}
   if (trocaDia) {
-    const { data: regs } = await supabase
-      .from('Registro')
-      .select('categoria, realizado, meta')
-      .eq('trocaDiaId', trocaDia.id)
-
-    if (regs) {
-      for (const r of regs) {
-        registros[r.categoria] = { realizado: r.realizado, meta: r.meta }
-      }
+    const regs = await getRegistrosByTrocaDiaId(trocaDia.id)
+    for (const r of regs) {
+      registros[r.categoria] = { realizado: r.realizado, meta: r.meta }
     }
   }
 
@@ -125,67 +109,26 @@ export async function PUT(req: Request) {
 
     const today = todayString()
 
-    const { data: departamentos } = await supabase
-      .from('Departamento')
-      .select('id, nome, meta')
-      .in('nome', registros.map((r) => r.nome))
-
+    const departamentos = await getDepartamentosAtivos()
     const metaMap: Record<string, number> = {}
-    if (departamentos) {
-      for (const d of departamentos) {
-        metaMap[d.nome] = d.meta
-      }
+    for (const d of departamentos) {
+      metaMap[d.nome] = d.meta
     }
 
-    let trocaDiaId: number
+    const trocaDia = await getOrCreateTrocaDia(today)
 
-    const { data: existing } = await supabase
-      .from('TrocaDia')
-      .select('id')
-      .eq('data', today)
-      .single()
+    const registrosParaSalvar = registros.map((reg) => ({
+      departamentoId: null,
+      categoria: reg.nome,
+      realizado: reg.realizado,
+      meta: metaMap[reg.nome] ?? reg.meta,
+    }))
 
-    if (existing) {
-      trocaDiaId = existing.id
-
-      await supabase
-        .from('Registro')
-        .delete()
-        .eq('trocaDiaId', trocaDiaId)
-    } else {
-      const { data: created, error: createError } = await supabase
-        .from('TrocaDia')
-        .insert({ data: today })
-        .select()
-        .single()
-
-      if (createError || !created) {
-        throw new Error('Erro ao criar TrocaDia')
-      }
-      trocaDiaId = created.id
-    }
-
-    for (const reg of registros) {
-      const metaValor = metaMap[reg.nome] ?? reg.meta
-
-      const { error: insertError } = await supabase
-        .from('Registro')
-        .insert({
-          trocaDiaId,
-          categoria: reg.nome,
-          realizado: reg.realizado,
-          meta: metaValor,
-        })
-
-      if (insertError) {
-        console.error('[dados] Error inserting registro:', insertError)
-        throw insertError
-      }
-    }
+    await upsertRegistros(trocaDia.id, registrosParaSalvar)
 
     return NextResponse.json({ success: true, data: today })
   } catch (err) {
-    console.error('[dados] ERROR:', err)
+    console.error('[trocas] ERROR:', err)
     return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
   }
 }

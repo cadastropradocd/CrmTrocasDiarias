@@ -51,7 +51,7 @@ export default function HistoricoList() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/historico')
+        const res = await fetch('/api/trocas/historico')
         if (!res.ok) {
           showToast('Erro ao carregar histórico', 'error')
           setLoading(false)
@@ -74,7 +74,7 @@ export default function HistoricoList() {
 
   async function logout() {
     try {
-      await fetch('/api/logout', { method: 'POST' })
+      await fetch('/api/auth/logout', { method: 'POST' })
     } catch { /* ignore */ }
     window.location.href = '/login'
   }
@@ -114,7 +114,7 @@ export default function HistoricoList() {
           <div className="card">
             {historico.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', padding: '2rem', textAlign: 'center' }}>
-                Nenhum registro encontrado. Clique em "Lançar Hoje" para começar.
+                Nenhum registro encontrado. Clique em &quot;Lançar Hoje&quot; para começar.
               </p>
             ) : (
               <div className="table-wrap">
