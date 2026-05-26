@@ -4,7 +4,7 @@ import { verifyToken } from '@/app/lib/auth'
 /**
  * Fonte da verdade é o Cookie HttpOnly 'session'.
  * O cliente mantém uma cópia do token no sessionStorage apenas para uso no Authorization header.
- * proxy.ts decide se a requisição pode prosseguir ou deve ser redirecionada.
+ * middleware.ts decide se a requisição pode prosseguir ou deve ser redirecionada.
  */
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname

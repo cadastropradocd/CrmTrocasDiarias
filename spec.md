@@ -1,4 +1,4 @@
-# SPEC.md - Relatório de Trocas Diário (v3.0)
+# SPEC.md - Relatório de Trocas Diário (v4.0)
 
 ## 1. Visão Geral do Projeto
 
@@ -20,13 +20,10 @@
 | Next.js | 16.2.6 | Framework (App Router) |
 | React | 19.2.4 | Biblioteca UI |
 | TypeScript | 5 | Tipagem |
-| Prisma | 7.8.0 | ORM (PostgreSQL/Supabase) |
-| PostgreSQL | - | Banco de dados em produção |
-| SQLite | - | Banco de dados em desenvolvimento |
+| @supabase/supabase-js | 2.x | Cliente Supabase (banco de dados) |
 | bcryptjs | 3.0.3 | Hash de senhas |
 | jsonwebtoken | 9.0.3 | Autenticação JWT |
 | Chart.js | 4.5.1 | Gráficos |
-| pg | 8.21.0 | Pool de conexões PostgreSQL |
 
 **Estilização:** CSS com CSS Variables (Dark Theme) — sem Tailwind, sem frameworks CSS.
 
@@ -38,115 +35,123 @@
 TrocasDiarias/
 ├── app/
 │   ├── admin/
-│   │   ├── layout.tsx              # Layout com AdminSidebar (protegido ADMIN)
-│   │   ├── layout.module.css       # Estilos do layout admin
-│   │   ├── page.tsx                # Home do painel admin
-│   │   ├── departamentos/
-│   │   │   └── page.tsx            # CRUD de departamentos
-│   │   └── trocas/
-│   │       └── page.tsx            # Dashboard de trocas (editável)
+│   │   ├── departamentos/page.tsx    # CRUD de departamentos
+│   │   ├── historico/
+│   │   │   ├── page.tsx             # Lista histórico (admin)
+│   │   │   └── [data]/page.tsx      # Detalhes histórico (admin)
+│   │   ├── trocas/page.tsx          # Dashboard de trocas editável
+│   │   ├── layout.tsx               # Layout com AdminSidebar
+│   │   ├── layout.module.css
+│   │   └── page.tsx                 # Home painel admin
 │   ├── api/
-│   │   ├── login/route.ts          # POST: Autenticação
-│   │   ├── logout/route.ts         # POST: Logout
-│   │   ├── dados/route.ts          # GET/PUT: Registros por data
-│   │   ├── historico/route.ts     # GET: Lista todas as datas
-│   │   └── departamentos/route.ts   # CRUD completo de departamentos
+│   │   ├── auth/
+│   │   │   ├── login/route.ts       # POST: Autenticação
+│   │   │   ├── logout/route.ts      # POST: Logout
+│   │   │   └── register/route.ts    # POST: Criar usuário (ADMIN)
+│   │   ├── trocas/route.ts          # GET/PUT: Registros por data
+│   │   ├── trocas/historico/route.ts     # GET: Lista datas
+│   │   ├── trocas/historico/[data]/route.ts # GET: Detalhes por data
+│   │   ├── departamentos/route.ts   # CRUD departamentos
+│   │   └── users/route.ts           # CRUD usuários (ADMIN)
+│   ├── comercial/
+│   │   ├── historico/
+│   │   │   ├── page.tsx             # Lista histórico (comercial)
+│   │   │   └── [data]/page.tsx      # Detalhes histórico (comercial)
+│   │   ├── layout.tsx               # Layout com ComercialSidebar
+│   │   ├── layout.module.css
+│   │   └── page.tsx                 # Redirect para /comercial/historico
 │   ├── components/
-│   │   ├── Dashboard.tsx           # Componente principal (props: editable, readonlyBanner)
-│   │   ├── DateSelector.tsx        # Seletor de data
-│   │   ├── AdminSidebar.tsx        # Sidebar admin (hover-to-expand)
-│   │   └── Toast.tsx               # Notificações
-│   ├── login/
-│   │   └── page.tsx                # Página de login
+│   │   ├── Dashboard.tsx            # Componente principal (props: editable, readonlyBanner)
+│   │   ├── DateSelector.tsx         # Seletor de data
+│   │   ├── AdminSidebar.tsx         # Sidebar admin (hover-to-expand)
+│   │   ├── ComercialSidebar.tsx     # Sidebar comercial
+│   │   ├── HistoricoList.tsx        # Lista de histórico
+│   │   ├── HistoricoDetalhes.tsx    # Detalhes de uma data
+│   │   ├── TrocasDiarias.tsx        # Widget de trocas (usado em admin/trocas)
+│   │   └── Toast.tsx                # Notificações
 │   ├── lib/
-│   │   ├── prisma.ts               # PrismaClient (PostgreSQL/SQLite)
-│   │   ├── auth.ts                 # JWT & Bcrypt
-│   │   ├── session.ts              # getSession()
-│   │   └── types.ts                # Role, helpers
-│   ├── globals.css                 # CSS global (dark theme)
-│   ├── layout.tsx                  # RootLayout
-│   └── page.tsx                    # Dashboard público (somente leitura)
-├── prisma/
-│   ├── schema.prisma               # Modelo de dados (PostgreSQL)
-│   ├── seed.ts                    # Seed com usuários e dados históricos
-│   └── config.ts                   # Configuração do Prisma
-├── .env                            # Variaveis locais (dev)
+│   │   ├── auth.ts                  # JWT & Bcrypt
+│   │   ├── session.ts               # getSession() (server-side)
+│   │   ├── supabase.ts              # Cliente Supabase
+│   │   ├── db/                      # Helpers de banco (usados pela API)
+│   │   │   ├── index.ts             # Export agregado
+│   │   │   ├── usuarios.ts          # getUserByUsername, createUser, etc
+│   │   │   ├── departamentos.ts      # CRUD departamentos
+│   │   │   ├── trocas.ts           # getTrocaDiaByDate, getOrCreateTrocaDia
+│   │   │   └── registros.ts         # getRegistrosByTrocaDiaId, upsertRegistros
+│   │   ├── database.types.ts        # Tipos gerados do Supabase
+│   │   └── types.ts                 # Role, helpers
+│   ├── login/page.tsx               # Página de login
+│   ├── globals.css                  # CSS global (dark theme)
+│   ├── layout.tsx                   # RootLayout
+│   └── page.tsx                     # Dashboard readonly (/)
+├── middleware.ts                     # Auth middleware (renomeado de proxy.ts)
+├── scripts/
+│   └── migrate_via_api.js           # Script de migração
+├── supabase-init.sql                # Schema inicial
 ├── package.json
 ├── tsconfig.json
 ├── next.config.ts
-└── SPEC.md                        # Este documento
+└── spec.md                          # Este documento
 ```
 
 ---
 
-## 4. Modelo de Dados (Prisma Schema)
+## 4. Modelo de Dados (Supabase/PostgreSQL)
 
-### 4.1 Enum Role
+### 4.1 Tabela `usuarios`
 
-```prisma
-enum Role {
-  ADMIN    // Pode editar dados e gerenciar departamentos
-  USER     // Apenas visualização
-}
+| Coluna | Tipo | Descrição |
+|--------|------|---------|
+| id | serial | PK |
+| username | varchar(50) | Unique |
+| password | varchar(255) | Hash bcrypt |
+| name | varchar(100) | Nome completo |
+| role | role | ADMIN ou USER |
+| created_at | timestamp | Default now() |
+
+### 4.2 Enum Role
+
+```sql
+CREATE TYPE role AS ENUM ('ADMIN', 'USER');
 ```
 
-### 4.2 Model User
+### 4.3 Tabela `trocas_dias`
 
-```prisma
-model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String   // Hash bcrypt
-  name      String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-}
-```
+Cada dia de registro é um `trocas_dias` único. Permite histórico permanente.
 
-### 4.3 Model TrocaDia
+| Coluna | Tipo | Descrição |
+|--------|------|---------|
+| id | serial | PK |
+| data | date | Unique (YYYY-MM-DD) |
+| created_at | timestamp | Default now() |
 
-Cada dia de registro é um `TrocaDia` único. Permite histórico permanente.
+### 4.4 Tabela `registros`
 
-```prisma
-model TrocaDia {
-  id        Int       @id @default(autoincrement())
-  data      DateTime  @unique  // UTC midnight (YYYY-MM-DD 00:00:00)
-  createdAt DateTime  @default(now())
-  registros Registro[]
-}
-```
+Registros pertencem a um `trocas_dias`. Um departamento pode ter apenas um registro por dia.
 
-### 4.4 Model Registro
+| Coluna | Tipo | Descrição |
+|--------|------|---------|
+| id | serial | PK |
+| troca_dia_id | int | FK → trocas_dias.id |
+| categoria | varchar(100) | Nome do departamento |
+| realizado | float | Valor realizado no dia |
+| meta | float | Meta do dia |
 
-Registros pertencem a um `TrocaDia`. Um departamento pode ter apenas um registro por dia.
+**Unique constraint:** `(troca_dia_id, categoria)`
 
-```prisma
-model Registro {
-  id          Int      @id @default(autoincrement())
-  categoria   String   // Nome do departamento
-  realizado   Float    // Valor realizado no dia
-  meta        Float    // Meta do dia
-  trocaDiaId  Int
-  trocaDia    TrocaDia @relation(fields: [trocaDiaId], references: [id], onDelete: Cascade)
-
-  @@unique([trocaDiaId, categoria])
-}
-```
-
-### 4.5 Model Departamento
+### 4.5 Tabela `departamentos`
 
 Departamentos/categorias gerenciados pelo admin. Cada departamento tem uma meta padrão.
 
-```prisma
-model Departamento {
-  id        Int      @id @default(autoincrement())
-  nome      String   @unique  // Uppercase (ex: "AÇOUGUE")
-  meta      Float    // Meta diária padrão
-  ativo     Boolean  @default(true)  // Pode ser desativado
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-```
+| Coluna | Tipo | Descrição |
+|--------|------|---------|
+| id | serial | PK |
+| nome | varchar(100) | Unique, uppercase |
+| meta | float | Meta diária padrão |
+| ativo | boolean | Pode ser desativado |
+| created_at | timestamp | Default now() |
+| updated_at | timestamp | Auto-update |
 
 ---
 
@@ -165,26 +170,36 @@ model Departamento {
 
 | Método | Rota | Descrição | Auth |
 |--------|------|-----------|------|
-| POST | `/api/login` | Login com username/password | Público |
-| POST | `/api/logout` | Logout (limpa cookie) | Logado |
+| POST | `/api/auth/login` | Login com username/password | Público |
+| POST | `/api/auth/logout` | Logout (limpa cookie) | Logado |
+| POST | `/api/auth/register` | Criar usuário | ADMIN |
 
-### 6.2 Dados
+### 6.2 Trocas
 
 | Método | Rota | Descrição | Auth |
 |--------|------|-----------|------|
-| GET | `/api/historico` | Lista todas as datas disponíveis | Logado |
-| GET | `/api/dados?date=YYYY-MM-DD` | Retorna registros de um dia | Logado |
-| PUT | `/api/dados` | Salva/Atualiza registros de um dia | ADMIN |
+| GET | `/api/trocas?date=YYYY-MM-DD` | Retorna registros de um dia | Logado |
+| PUT | `/api/trocas` | Salva/Atualiza registros de um dia | ADMIN |
+| GET | `/api/trocas/historico` | Lista todas as datas | Logado |
+| GET | `/api/trocas/historico/[data]` | Detalhes de uma data | Logado |
 
 ### 6.3 Departamentos
 
 | Método | Rota | Descrição | Auth |
 |--------|------|-----------|------|
-| GET | `/api/departamentos` | Lista todos departamentos | ADMIN |
+| GET | `/api/departamentos` | Lista todos departamentos | Logado |
 | POST | `/api/departamentos` | Cria novo departamento | ADMIN |
 | PUT | `/api/departamentos?id=X` | Atualiza departamento | ADMIN |
-| PATCH | `/api/departamentos?id=X` | Atualiza campo específico (ativo) | ADMIN |
+| PATCH | `/api/departamentos?id=X` | Toggle ativo | ADMIN |
 | DELETE | `/api/departamentos?id=X` | Remove departamento | ADMIN |
+
+### 6.4 Usuários
+
+| Método | Rota | Descrição | Auth |
+|--------|------|-----------|------|
+| GET | `/api/users` | Lista todos usuários | ADMIN |
+| POST | `/api/users` | Cria usuário | ADMIN |
+| DELETE | `/api/users?id=X` | Remove usuário | ADMIN |
 
 ---
 
@@ -192,7 +207,7 @@ model Departamento {
 
 ### 7.1 Fluxo de Login
 
-1. Usuário envia `POST /api/login` com `{ username, password }`
+1. Usuário envia `POST /api/auth/login` com `{ username, password }`
 2. Backend valida credenciais via bcrypt
 3. Gera JWT com payload `{ username, name, role }`
 4. Define cookie `session` (HttpOnly, secure em prod)
@@ -200,24 +215,18 @@ model Departamento {
 
 ### 7.2 Proteção de Rotas
 
-**Server-side (Next.js Server Components):**
-- Páginas admin validam cookie `token` diretamente no servidor
-- Redirecionam para `/login` se inválido ou se role != ADMIN
+**Middleware (`middleware.ts`):**
+- `/login` → Se logado, redirect para `/admin` ou `/comercial`
+- `/admin/*` → Apenas ADMIN
+- `/comercial/*` → Qualquer usuário logado
+- `/` → Qualquer usuário logado
 
-**API Routes:**
-- Validam sessão via `getSession()` ou `verifyToken()`
-- Retornam 401 se não autorizado
+### 7.3 Fluxo de Redirect Pós-Login
 
-### 7.3 Middleware/Validação
-
-```typescript
-// Exemplo de proteção em página admin
-const cookieStore = await cookies()
-const token = cookieStore.get('token')?.value
-if (!token) redirect('/login')
-const user = await prisma.user.findUnique({ where: { username: token } })
-if (!user || user.role !== 'ADMIN') redirect('/login')
-```
+| Role | Redirect |
+|------|----------|
+| ADMIN | `/admin` |
+| USER | `/comercial` → `/comercial/historico` |
 
 ---
 
@@ -227,7 +236,7 @@ if (!user || user.role !== 'ADMIN') redirect('/login')
 
 - Formulário com username e password
 - Erros mostrados via Toast
-- Redireciona para `/` ou `/admin` após login bem-sucedido
+- Redireciona para `/admin` ou `/comercial` após login
 
 ### 8.2 Dashboard Público (`/`)
 
@@ -238,117 +247,69 @@ if (!user || user.role !== 'ADMIN') redirect('/login')
 
 ### 8.3 Painel Admin (`/admin`)
 
-- Home do painel com cards de navegação
+- Home do painel admin com cards
 - Protegido: apenas ADMIN acessa
-- Redireciona para `/login` se não autorizado
+- AdminSidebar com navegação
 
-### 8.4 Departamentos Admin (`/admin/departamentos`)
+### 8.4 Trocas Admin (`/admin/trocas`)
+
+- Componente `<TrocasDiarias />`
+- Dashboard editável
+- Admin pode navegar e editar qualquer data
+
+### 8.5 Departamentos Admin (`/admin/departamentos`)
 
 - CRUD completo de departamentos
 - Tabela com colunas: Nome, Meta, Status, Ações
-- Modal para criar/editar
-- Toggle para ativar/inativar
-- Confirmação antes de excluir
 
-### 8.5 Trocas Admin (`/admin/trocas`)
+### 8.6 Histórico Admin (`/admin/historico`)
 
-- Componente `<Dashboard editable={true} readonlyBanner={false} />`
-- Mesma interface do público, mas com edição habilitada
-- Admin pode navegar e editar qualquer data
+- Lista todas as datas disponíveis
+- Redirect para detalhes ao clicar
+
+### 8.7 Área Comercial (`/comercial`)
+
+- `/comercial` → redirect para `/comercial/historico`
+- `/comercial/historico` → `<HistoricoList isComercial={true} />`
+- `/comercial/historico/[data]` → `<HistoricoDetalhes isComercial={true} />`
+- ComercialSidebar
 
 ---
 
-## 9. AdminSidebar (Sidebar Admin)
+## 9-sidebars
 
-### 9.1 Comportamento
+### 9.1 AdminSidebar
 
-- **Oculta por padrão:** Largura de 60px (apenas indicador visual)
-- **Expande no hover:** Largura de 220px com labels visíveis
+- **Oculta por padrão:** Largura de 60px
+- **Expande no hover:** Largura de 220px
 - **Posição:** Fixed na esquerda, altura 100vh
-- **Z-index:** 200 (acima do conteúdo principal)
 
-### 9.2 Itens de Navegação
+| Label | Rota |
+|-------|------|
+| Home | `/admin` |
+| Departamentos | `/admin/departamentos` |
+| Trocas Diárias | `/admin/trocas` |
+| Sair | `/login` |
 
-| Label | Ícone | Rota | Descrição |
-|-------|-------|------|-----------|
-| Home | 🏠 | `/admin` | Painel admin |
-| Departamentos | 📦 | `/admin/departamentos` | CRUD departamentos |
-| Trocas Diárias | 📊 | `/admin/trocas` | Dashboard editável |
-| Sair | 🚪 | `/login` | Logout |
+### 9.2 ComercialSidebar
 
-### 9.3 Estilos
+- Mesma estrutura visual da AdminSidebar
+- Itens específicos para área comercial
 
-- Background: `var(--bg-header)`
-- Borda direita: `1px solid var(--border)`
-- Transição: `width 0.2s ease`
-- Indicador ativo: Borda esquerda `3px solid var(--accent)`
-
----
-
-## 10. Departamentos CRUD
-
-### 10.1 Tela de Listagem
-
-- Header com título e botão "Novo Departamento"
-- Tabela com colunas: Nome, Meta, Status (Ativo/Inativo), Ações
-- Empty state com mensagem e botão para criar primeiro
-
-### 10.2 Modal de Formulário
-
-- Campos: Nome (text), Meta (number)
-- Validação: Nome obrigatório, Meta >= 0
-- Botões: Cancelar, Salvar
-- Feedback de erro inline
-
-### 10.3 Ações
-
-| Ação | Método | Descrição |
-|------|--------|-----------|
-| Criar | POST `/api/departamentos` | Novo departamento |
-| Editar | PUT `/api/departamentos?id=X` | Atualiza nome e meta |
-| Toggle Status | PATCH `/api/departamentos?id=X` | Ativa/Inativa |
-| Excluir | DELETE `/api/departamentos?id=X` | Remove departamento |
+| Label | Rota |
+|-------|------|
+| Histórico | `/comercial/historico` |
+| Sair | `/login` |
 
 ---
 
-## 11. Configuração de Ambiente
+## 10. Componentes Principais
 
-### 11.1 Variáveis Locais (`.env`)
-
-```env
-# Desenvolvimento (SQLite)
-DATABASE_URL="file:./dev.db"
-JWT_SECRET="dev-secret-mudar-em-producao"
-```
-
-### 11.2 Variáveis Vercel (Environment Variables)
-
-```env
-# Produção (Supabase PostgreSQL)
-DATABASE_URL=postgresql://postgres:[SENHA]@aws-0-sa-east-1.pooler.supabase.com:6543/postgres
-DIRECT_URL=postgresql://postgres:[SENHA]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
-JWT_SECRET=[STRING-SEGURA-MINIMO-32-CHARS]
-```
-
-### 11.3 Prisma Adapter Logic
-
-```typescript
-if (DATABASE_URL.startsWith('postgresql://')) {
-  // Usa PrismaPg com Pool pg
-} else {
-  // Usa PrismaBetterSqlite3
-}
-```
-
----
-
-## 12. Componentes Principais
-
-### 12.1 Dashboard.tsx
+### 10.1 Dashboard.tsx
 
 Props:
-- `editable?: boolean` — Habilita edição (default: false)
-- `readonlyBanner?: boolean` — Mostra banner "Modo somente leitura" (default: false)
+- `editable?: boolean` — Habilita edição
+- `readonlyBanner?: boolean` — Mostra banner "Modo somente leitura"
 
 Funcionalidades:
 - DateSelector integrado
@@ -357,44 +318,42 @@ Funcionalidades:
 - Botão Salvar (se editable)
 - Toast para feedback
 
-### 12.2 DateSelector.tsx
+### 10.2 TrocasDiarias.tsx
+
+Page wrapper para `/admin/trocas`. Renderiza `<Dashboard editable={true} />`.
+
+### 10.3 HistoricoList.tsx
+
+Props:
+- `isComercial?: boolean` — Ajusta caminhos de navegação
+
+Lista datas disponíveis com totales.
+
+### 10.4 HistoricoDetalhes.tsx
+
+Props:
+- `isComercial?: boolean` — Ajusta caminhos de navegação
+
+Mostra detalhes de uma data específica.
+
+### 10.5 DateSelector.tsx
 
 Props:
 - `selectedDate: string` — Data atual (YYYY-MM-DD)
-- `onDateChange: (date: string) => void` — Callback ao selecionar
+- `onDateChange: (date: string) => void`
 
-Funcionalidades:
-- Dropdown com datas do histórico
-- Opção "Hoje" destacada
-- Campo para data customizada
-
-### 12.3 AdminSidebar.tsx
-
-Props: Nenhuma (standalone)
-
-Funcionalidades:
-- Hover expand/collapse
-- Link ativo com highlight
-- Ícones e labels
-- Brand no footer
+Dropdown com datas do histórico.
 
 ---
 
-## 13. Regras de Negócio
+## 11. Regras de Negócio
 
-### 13.1 Data Handling
+### 11.1 Data Handling
 
-- Todas as datas são normalizadas para UTC midnight
-- `toDateOnly()` converte para `Date.UTC(y, m, d, 0, 0, 0, 0)`
-- DateSelector usa getters locais (`getDate()`) para exibir corretamente no fuso de São Paulo
+-Todas as datasnormalizadas para UTC midnight
+- DateSelector usa getters locais para exibir no fuso de São Paulo
 
-### 13.2 Validação
-
-- Campos obrigatórios validados no cliente e servidor
-- Tipos verificados antes de processar
-- SQL injection prevenida via Prisma ORM
-
-### 13.3 Histórico
+### 11.2 Histórico
 
 - Dados nunca são sobrescritos, apenas novos dias são criados
 - TrocaDia é único por data
@@ -402,58 +361,34 @@ Funcionalidades:
 
 ---
 
-## 14. Scripts npm
+## 12. Variáveis de Ambiente
+
+### 12.1 Locais (`.env` / `.env.local`)
+
+```env
+JWT_SECRET=[string-secreta-minimo-32-chars]
+NEXT_PUBLIC_SUPABASE_URL=[url-supabase]
+NEXT_PUBLIC_SUPABASE_ANON_KEY=[chave-anonima]
+```
+
+### 12.2 Vercel
+
+Mesmas variáveis configuradas no dashboard da Vercel.
+
+---
+
+## 13. Scripts npm
 
 | Script | Descrição |
-|--------|-----------|
+|--------|----------|
 | `dev` | Inicia servidor de desenvolvimento |
-| `build` | `prisma generate && next build` |
+| `build` | `next build` |
 | `start` | Inicia servidor de produção |
-| `postinstall` | Gera Prisma Client |
-| `db:migrate` | Executa migrations |
-| `db:seed` | Popula banco com dados iniciais |
-| `db:setup` | Migrate + seed |
+| `lint` | ESLint |
 
 ---
 
-## 15. Bugs Conhecidos e Correções
-
-### 15.1 Data Bug (Corrigido)
-
-**Problema:** Badge mostrava data de ontem em vez de hoje.
-**Causa:** Uso de getters UTC (`getUTCDate()`) sem considerar fuso horário.
-**Solução:** Usar getters locais (`getDate()`) para exibição.
-
-### 15.2 Export Bug (Corrigido)
-
-**Problema:** Build falhava com "Export default doesn't exist".
-**Causa:** Import usava `import prisma from` mas prisma.ts usava named export.
-**Solução:** Usar `import { prisma } from '@/app/lib/prisma'`.
-
----
-
-## 16. Estado Atual do Projeto
-
-### 16.1 Funcionalidades Implementadas
-
-✅ Login/logout com JWT
-✅ Proteção de rotas (ADMIN/USER)
-✅ Dashboard com gráfico
-✅ CRUD de dados diários (admin)
-✅ CRUD de departamentos (admin)
-✅ AdminSidebar com hover
-✅ Histórico de datas
-✅ Toast notifications
-✅ Dark theme CSS
-
-### 16.2 Pendente
-
-⏳ Migração do schema para Supabase (configurar DATABASE_URL no Vercel)
-⏳ Deploy em produção
-
----
-
-## 17. URLs do Projeto
+## 14. URLs do Projeto
 
 | Ambiente | URL |
 |----------|-----|
@@ -462,4 +397,13 @@ Funcionalidades:
 
 ---
 
-*Última atualização: 2026-05-25*
+## 15. Bugs / Correções Recentes
+
+| Data | Descrição |
+|------|----------|
+| 26/05/2026 | Login redirecionava ADMIN para `/` (home) em vez de `/admin` |
+| 26/05/2026 | Área comercial não tinha redirect para `/comercial/historico` |
+
+---
+
+*Última atualização: 2026-05-26*
