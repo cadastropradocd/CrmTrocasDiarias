@@ -4,11 +4,12 @@ import { Role } from './types'
 
 const JWT_SECRET = process.env.JWT_SECRET
 
-// Debug log para ajudar a identificar o problema em produção
+const isProduction = process.env.NODE_ENV === 'production'
+
 if (!JWT_SECRET) {
   console.error('[auth] JWT_SECRET não está definido!')
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable is required in production')
+  if (isProduction) {
+    console.error('[auth] ERRO CRÍTICO: Variável JWT_SECRET necessária em produção')
   }
 }
 
@@ -27,7 +28,9 @@ export async function comparePassword(password: string, hash: string): Promise<b
  */
 export function signToken(payload: { username: string; name: string; role: Role }): string {
   if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET is not configured')
+    const error = 'JWT_SECRET is not configured'
+    console.error('[auth]', error)
+    throw new Error(error)
   }
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
 }
@@ -35,14 +38,30 @@ export function signToken(payload: { username: string; name: string; role: Role 
 /**
  * Verifica token JWT.
  * Retorna null se token inválido ou expirado.
+ * Handles gracefully em ambos ambientes.
  */
 export function verifyToken(token: string): { username: string; name: string; role: Role } | null {
   if (!JWT_SECRET) {
+    console.warn('[auth] JWT_SECRET not configured, rejecting token')
+    return null
+  }
+  if (!token || typeof token !== 'string') {
     return null
   }
   try {
-    return jwt.verify(token, JWT_SECRET) as { username: string; name: string; role: Role }
-  } catch {
+    const decoded = jwt.verify(token, JWT_SECRET)
+    if (
+      typeof decoded === 'object' &&
+      decoded !== null &&
+      'username' in decoded &&
+      'name' in decoded &&
+      'role' in decoded
+    ) {
+      return decoded as { username: string; name: string; role: Role }
+    }
+    return null
+  } catch (error) {
+    console.warn('[auth] Token verification failed:', error instanceof Error ? error.message : 'Unknown error')
     return null
   }
 }

@@ -19,7 +19,7 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next()
   }
 
-  if (path === '/admin') {
+  if (path === '/admin' || path.startsWith('/admin/')) {
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', req.nextUrl))
     }
