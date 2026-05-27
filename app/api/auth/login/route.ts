@@ -1,50 +1,31 @@
 import { NextResponse } from 'next/server'
-import { getUserByUsername } from '@/app/lib/db'
-import { comparePassword, signToken } from '@/app/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
+  const baseUrl = new URL(req.url).origin
+  
   try {
-    let username: string, password: string
-
-    try {
-      const body = await req.json()
-      if (typeof body.username !== 'string' || typeof body.password !== 'string') {
-        return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
-      }
-      username = body.username.trim()
-      password = body.password
-    } catch {
-      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
-    }
-
-    if (!username || !password) {
-      return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 })
-    }
-
-    const user = await getUserByUsername(username)
-    if (!user) {
-      return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
-    }
-
-    const valid = await comparePassword(password, user.password)
-    if (!valid) {
-      return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
-    }
-
-    const token = signToken({ username: user.username, name: user.name, role: user.role })
-
-    const response = NextResponse.json({ token, name: user.name, role: user.role })
-    response.cookies.set('session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
-      path: '/',
+    const body = await req.json()
+    // Forward to edge function via absolute URL
+    const res = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     })
-
+    
+    const data = await res.json()
+    const response = NextResponse.json(data)
+    
+    // Pass cookies
+    const setCookie = res.headers.get('set-cookie')
+    if (setCookie) {
+      response.headers.set('set-cookie', setCookie)
+    }
+    
     return response
   } catch (err) {
-    console.error('[login] Full error:', err)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    console.error('[login] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

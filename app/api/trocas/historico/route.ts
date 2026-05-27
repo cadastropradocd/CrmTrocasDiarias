@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/app/lib/session'
-import { getTrocasDiasComTotais } from '@/app/lib/db'
 
-export async function GET() {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
+export const dynamic = 'force-dynamic'
 
-  const result = await getTrocasDiasComTotais()
-  return NextResponse.json(result)
+async function proxyRequest(req: Request, path: string) {
+  const baseUrl = new URL(req.url).origin
+  const url = new URL(req.url)
+  const cookie = req.headers.get('cookie') || ''
+  
+  const res = await fetch(`${baseUrl}${path}${url.search}`, {
+    method: req.method,
+    headers: {
+      'Content-Type': 'application/json', 
+      'cookie': cookie,
+    },
+    body: req.method !== 'GET' ? await req.text() : undefined,
+  })
+  
+  return NextResponse.json(await res.json())
+}
+
+export async function GET(req: Request) {
+  return proxyRequest(req, '/api/trocas/historico')
 }

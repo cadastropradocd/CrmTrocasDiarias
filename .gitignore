@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
+
+# cloudflare
+.dev.vars
+.wrangler
 
 # sqlite
 *.db

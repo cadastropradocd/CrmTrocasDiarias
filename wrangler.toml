@@ -1,0 +1,10 @@
+name = "trocas-diarias"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trocas-diarias"
+database_id = "33ec3b78-0901-429f-860b-417a835d53a4"
+
+[vars]
+ENVIRONMENT = "production"
