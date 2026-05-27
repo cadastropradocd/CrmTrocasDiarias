@@ -1,5 +1,7 @@
-name = "trocasdiarias"
-compatibility_date = "2024-01-01"
+name = "trocas-diarias"
+compatibility_date = "2024-04-19"
+compatibility_flags = ["nodejs_compat"]
+
 pages_build_output_dir = ".next"
 
 [[d1_databases]]
@@ -8,4 +10,4 @@ database_name = "trocas-diarias"
 database_id = "33ec3b78-0901-429f-860b-417a835d53a4"
 
 [vars]
-ENVIRONMENT = "production"
+JWT_SECRET = "dev-secret-change-me-in-production"

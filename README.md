@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CRM Trocas Diárias
 
-## Getting Started
+Sistema de CRM para registro de trocas diárias por departamento.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** - Framework full-stack
+- **Cloudflare Pages** - Hosting na edge
+- **D1** - Banco SQLite serverless
+- **@opennextjs/cloudflare** - Build adapter
+
+## Setup
+
+### 1. Criar D1
+
+```bash
+wrangler d1 create trocas-diarias
+```
+
+Atualizar `wrangler.toml` com o `database_id` retornado:
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "trocas-diarias"
+database_id = "YOUR_ACTUAL_DB_ID"
+```
+
+### 2. Aplicar Schema
+
+```bash
+wrangler d1 execute trocas-diarias --remote --file=./schema.sql
+```
+
+### 3. Seed (opcional)
+
+```bash
+wrangler d1 execute trocas-diarias --remote --file=./seed.sql
+```
+
+### 4. Configurar Variáveis
+
+No dashboard do Cloudflare Pages → Settings → Environment Variables:
+
+```
+JWT_SECRET = seu-secret-aqui
+```
+
+### 5. Deploy
+
+```bash
+npm run build
+npm run deploy
+```
+
+## Desenvolvimento Local
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script | Descrição |
+|--------|-----------|
+| `npm run dev` | Dev server em localhost:3000 |
+| `npm run build` | Build com open-next |
+| `npm run deploy` | Deploy para Cloudflare Pages |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estrutura
 
-## Learn More
+```
+/
+├── app/                    # Next.js app router
+│   ├── api/               # API routes (Edge)
+│   ├── admin/            # Páginas admin
+│   ├── dashboard/        # Dashboard
+│   ├── historico/         # Histórico
+│   ├── login/            # Login
+│   └── components/       # Componentes React
+├── public/               # Assets estáticos
+├── schema.sql            # Schema D1
+├── seed.sql             # Dados iniciais
+├── wrangler.toml        # Config Cloudflare
+└── package.json
+```
 
-To learn more about Next.js, take a look at the following resources:
+## API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/auth/login | Login |
+| POST | /api/auth/logout | Logout |
+| GET | /api/trocas | Get today's data |
+| PUT | /api/trocas | Update trocas (admin) |
+| GET | /api/trocas/historico | Get history |
+| GET | /api/users | List users (admin) |
+| POST | /api/users | Create user (admin) |
+| DELETE | /api/users?id=X | Delete user (admin) |
+| GET | /api/departamentos | List departamentos (admin) |
+| POST | /api/departamentos | Create departamento (admin) |
+| PUT | /api/departamentos?id=X | Update departamento (admin) |
+| PATCH | /api/departamentos?id=X | Toggle ativo (admin) |
+| DELETE | /api/departamentos?id=X | Delete departamento (admin) |

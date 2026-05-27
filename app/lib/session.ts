@@ -7,7 +7,9 @@ export async function getSession(): Promise<{ username: string; name: string; ro
     const cookieStore = await cookies()
     const token = cookieStore.get('session')?.value
     if (!token || typeof token !== 'string') return null
-    return verifyToken(token)
+
+    const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
+    return await verifyToken(token, JWT_SECRET)
   } catch (error) {
     console.error('[getSession] Error:', error)
     return null

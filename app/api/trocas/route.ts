@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/app/lib/auth'
-import type { Role } from '@/app/lib/db'
+import type { Role } from '@/app/lib/types'
 
 export const runtime = 'edge'
 
@@ -21,13 +21,14 @@ function getSessionCookie(req: Request): string | null {
   return match ? match.split('=')[1]?.trim() : null
 }
 
-export async function GET(req: Request, { env }: { env: Env }) {
+export async function GET(req: Request, context: { env: Env }) {
+  const { env } = context
   const cookie = getSessionCookie(req)
   if (!cookie) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const session = verifyToken(cookie)
+  const session = await verifyToken(cookie, env.JWT_SECRET)
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
@@ -64,21 +65,22 @@ export async function GET(req: Request, { env }: { env: Env }) {
   })
 }
 
-export async function PUT(req: Request, { env }: { env: Env }) {
+export async function PUT(req: Request, context: { env: Env }) {
+  const { env } = context
   const cookie = getSessionCookie(req)
   let userRole: Role = 'USER'
 
   if (cookie) {
-    const session = verifyToken(cookie)
+    const session = await verifyToken(cookie, env.JWT_SECRET)
     if (session) {
       userRole = session.role
     }
   }
 
-  if (!cookie || !verifyToken(cookie)) {
+  if (!cookie || !await verifyToken(cookie, env.JWT_SECRET)) {
     const authHeader = req.headers.get('authorization')
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-    const decoded = token ? verifyToken(token) : null
+    const decoded = token ? await verifyToken(token, env.JWT_SECRET) : null
     if (!decoded) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }

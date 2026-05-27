@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/app/lib/auth'
-import { hashPassword } from '@/app/lib/auth'
-import type { Role } from '@/app/lib/db'
+import { verifyToken, hashPassword } from '@/app/lib/auth'
+import type { Role } from '@/app/lib/types'
 
 export const runtime = 'edge'
 
@@ -17,12 +16,13 @@ function getSessionCookie(req: Request): string | null {
 async function requireAdmin(env: Env, req: Request) {
   const cookie = getSessionCookie(req)
   if (!cookie) return null
-  const session = verifyToken(cookie)
+  const session = await verifyToken(cookie, env.JWT_SECRET)
   if (!session || session.role !== 'ADMIN') return null
   return session
 }
 
-export async function GET(req: Request, { env }: { env: Env }) {
+export async function GET(req: Request, context: { env: Env }) {
+  const { env } = context
   try {
     const session = await requireAdmin(env, req)
     if (!session) {
@@ -37,7 +37,8 @@ export async function GET(req: Request, { env }: { env: Env }) {
   }
 }
 
-export async function POST(req: NextRequest, { env }: { env: Env }) {
+export async function POST(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const session = await requireAdmin(env, req)
     if (!session) {
@@ -72,7 +73,8 @@ export async function POST(req: NextRequest, { env }: { env: Env }) {
   }
 }
 
-export async function DELETE(req: NextRequest, { env }: { env: Env }) {
+export async function DELETE(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const session = await requireAdmin(env, req)
     if (!session) {

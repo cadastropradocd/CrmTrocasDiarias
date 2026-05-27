@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "deploy": "npx wrangler pages deploy .next",
-    "start": "next start",
+    "preview": "next build && next start",
+    "deploy": "npm run build && wrangler pages deploy .next",
     "lint": "eslint"
   },
   "dependencies": {
@@ -19,12 +19,10 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.11",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "esbuild": "^0.28.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "typescript": "^5",

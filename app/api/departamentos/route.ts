@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/app/lib/auth'
-import type { Role } from '@/app/lib/db'
+import type { Role } from '@/app/lib/types'
 
 export const runtime = 'edge'
 
@@ -8,12 +8,13 @@ type Env = { DB: D1Database; JWT_SECRET: string }
 
 async function requireAdmin(env: Env, cookie: string | null) {
   if (!cookie) return null
-  const session = verifyToken(cookie)
+  const session = await verifyToken(cookie, env.JWT_SECRET)
   if (!session || session.role !== 'ADMIN') return null
   return session
 }
 
-export async function GET(req: Request, { env }: { env: Env }) {
+export async function GET(req: Request, context: { env: Env }) {
+  const { env } = context
   try {
     const cookie = req.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='))?.split('=')[1]
     const session = await requireAdmin(env, cookie ? `session=${cookie.split(';')[0].trim()}` : null)
@@ -29,7 +30,8 @@ export async function GET(req: Request, { env }: { env: Env }) {
   }
 }
 
-export async function POST(req: NextRequest, { env }: { env: Env }) {
+export async function POST(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const cookie = req.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='))?.split('=')[1]
     const session = await requireAdmin(env, cookie ? `session=${cookie.split(';')[0].trim()}` : null)
@@ -64,7 +66,8 @@ export async function POST(req: NextRequest, { env }: { env: Env }) {
   }
 }
 
-export async function PUT(req: NextRequest, { env }: { env: Env }) {
+export async function PUT(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const cookie = req.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='))?.split('=')[1]
     const session = await requireAdmin(env, cookie ? `session=${cookie.split(';')[0].trim()}` : null)
@@ -105,7 +108,8 @@ export async function PUT(req: NextRequest, { env }: { env: Env }) {
   }
 }
 
-export async function PATCH(req: NextRequest, { env }: { env: Env }) {
+export async function PATCH(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const cookie = req.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='))?.split('=')[1]
     const session = await requireAdmin(env, cookie ? `session=${cookie.split(';')[0].trim()}` : null)
@@ -155,7 +159,8 @@ export async function PATCH(req: NextRequest, { env }: { env: Env }) {
   }
 }
 
-export async function DELETE(req: NextRequest, { env }: { env: Env }) {
+export async function DELETE(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     const cookie = req.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='))?.split('=')[1]
     const session = await requireAdmin(env, cookie ? `session=${cookie.split(';')[0].trim()}` : null)

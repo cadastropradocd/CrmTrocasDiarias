@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 export const runtime = 'edge'
 
 export async function POST(_req: Request) {
-  // Logout - clear session cookie
   const response = NextResponse.json({ ok: true })
   response.cookies.set('session', '', {
     httpOnly: true,

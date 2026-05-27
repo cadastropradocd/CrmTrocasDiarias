@@ -12,13 +12,14 @@ function getSessionCookie(req: Request): string | null {
   return match ? match.split('=')[1]?.trim() : null
 }
 
-export async function GET(req: Request, { env }: { env: Env }) {
+export async function GET(req: Request, context: { env: Env }) {
+  const { env } = context
   const cookie = getSessionCookie(req)
   if (!cookie) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const session = verifyToken(cookie)
+  const session = await verifyToken(cookie, env.JWT_SECRET)
   if (!session) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }

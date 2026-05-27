@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { comparePassword, signToken } from '@/app/lib/auth'
-import type { Role } from '@/app/lib/db'
+import type { Role } from '@/app/lib/types'
 
 export const runtime = 'edge'
 
-export async function POST(req: Request, { env }: { env: { DB: D1Database; JWT_SECRET: string } }) {
+type Env = { DB: D1Database; JWT_SECRET: string }
+
+export async function POST(req: NextRequest, context: { env: Env }) {
+  const { env } = context
   try {
     let username: string, password: string
 
@@ -36,7 +39,7 @@ export async function POST(req: Request, { env }: { env: { DB: D1Database; JWT_S
       return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
     }
 
-    const token = signToken({ username: userResult.username, name: userResult.name, role: userResult.role })
+    const token = await signToken({ username: userResult.username, name: userResult.name, role: userResult.role }, env.JWT_SECRET)
 
     const response = NextResponse.json({ token, name: userResult.name, role: userResult.role })
     response.cookies.set('session', token, {
