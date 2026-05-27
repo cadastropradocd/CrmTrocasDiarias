@@ -1,31 +1,55 @@
 import { NextResponse } from 'next/server'
+import { comparePassword, signToken } from '@/app/lib/auth'
+import type { Role } from '@/app/lib/db'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
-export async function POST(req: Request) {
-  const baseUrl = new URL(req.url).origin
-  
+export async function POST(req: Request, { env }: { env: { DB: D1Database; JWT_SECRET: string } }) {
   try {
-    const body = await req.json()
-    // Forward to edge function via absolute URL
-    const res = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    
-    const data = await res.json()
-    const response = NextResponse.json(data)
-    
-    // Pass cookies
-    const setCookie = res.headers.get('set-cookie')
-    if (setCookie) {
-      response.headers.set('set-cookie', setCookie)
+    let username: string, password: string
+
+    try {
+      const body = await req.json()
+      if (typeof body.username !== 'string' || typeof body.password !== 'string') {
+        return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+      }
+      username = body.username.trim()
+      password = body.password
+    } catch {
+      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
     }
-    
+
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Usuário e senha são obrigatórios' }, { status: 400 })
+    }
+
+    const userResult = await env.DB.prepare(
+      'SELECT id, username, password, name, role FROM users WHERE username = ?'
+    ).bind(username).first<{ id: number; username: string; password: string; name: string; role: Role }>()
+
+    if (!userResult) {
+      return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
+    }
+
+    const valid = await comparePassword(password, userResult.password)
+    if (!valid) {
+      return NextResponse.json({ error: 'Usuário ou senha inválidos' }, { status: 401 })
+    }
+
+    const token = signToken({ username: userResult.username, name: userResult.name, role: userResult.role })
+
+    const response = NextResponse.json({ token, name: userResult.name, role: userResult.role })
+    response.cookies.set('session', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24,
+      path: '/',
+    })
+
     return response
   } catch (err) {
-    console.error('[login] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('[login] Full error:', err)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

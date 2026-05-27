@@ -1,36 +1,95 @@
-import { NextResponse } from 'next/server'
-import type { Role } from '@/app/lib/types'
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyToken } from '@/app/lib/auth'
+import { hashPassword } from '@/app/lib/auth'
+import type { Role } from '@/app/lib/db'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
-export async function GET() {
-  const res = await fetch('/api/users')
-  const data = await res.json()
-  return NextResponse.json(data)
+type Env = { DB: D1Database; JWT_SECRET: string }
+
+function getSessionCookie(req: Request): string | null {
+  const cookieHeader = req.headers.get('cookie')
+  if (!cookieHeader) return null
+  const match = cookieHeader.split(';').find(c => c.trim().startsWith('session='))
+  return match ? match.split('=')[1]?.trim() : null
 }
 
-export async function POST(req: Request) {
+async function requireAdmin(env: Env, req: Request) {
+  const cookie = getSessionCookie(req)
+  if (!cookie) return null
+  const session = verifyToken(cookie)
+  if (!session || session.role !== 'ADMIN') return null
+  return session
+}
+
+export async function GET(req: Request, { env }: { env: Env }) {
   try {
-    const body = await req.json()
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'cookie': req.headers.get('cookie') || '' },
-      body: JSON.stringify(body),
-    })
-    return NextResponse.json(await res.json(), { status: res.status })
-  } catch {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 })
+    const session = await requireAdmin(env, req)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const result = await env.DB.prepare('SELECT id, username, name, role, created_at FROM users ORDER BY name').all()
+    return NextResponse.json(result.results)
+  } catch (error) {
+    console.error('GET /api/users error:', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
 
-export async function DELETE(req: Request) {
-  const url = new URL(req.url)
-  const id = url.searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
-  
-  const res = await fetch(`/api/users?id=${id}`, {
-    method: 'DELETE',
-    headers: { 'cookie': req.headers.get('cookie') || '' },
-  })
-  return NextResponse.json(await res.json())
+export async function POST(req: NextRequest, { env }: { env: Env }) {
+  try {
+    const session = await requireAdmin(env, req)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { username, password, name, role } = body
+
+    if (!username || typeof username !== 'string' || !username.trim()) {
+      return NextResponse.json({ error: 'Username é obrigatório' }, { status: 400 })
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return NextResponse.json({ error: 'Senha deve ter pelo menos 6 caracteres' }, { status: 400 })
+    }
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 })
+    }
+
+    const hashedPassword = await hashPassword(password)
+
+    const result = await env.DB.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)').bind(username.trim(), hashedPassword, name.trim(), role === 'ADMIN' ? 'ADMIN' : 'USER').run()
+
+    const user = await env.DB.prepare('SELECT id, username, name, role, created_at FROM users WHERE id = ?').bind(result.meta?.last_row_id).first()
+
+    return NextResponse.json(user, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/users error:', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: NextRequest, { env }: { env: Env }) {
+  try {
+    const session = await requireAdmin(env, req)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = parseInt(searchParams.get('id') || '')
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+
+    await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('DELETE /api/users error:', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
 }
